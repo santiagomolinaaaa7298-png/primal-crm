@@ -33,6 +33,7 @@ create table if not exists pg_state (
   updated_at timestamptz default now()
 );
 
+-- pg_state también guarda la clave 'cobros' (cash collected por cliente).
 -- ---------- RLS ----------
 do $$
 declare t text;

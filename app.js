@@ -29,6 +29,8 @@ let MONTH = ymOf(todayStr());  // "YYYY-MM"
 let VIEW = "mando";
 let MOV_FILTERS = { tipo:"", categoria:"", cuenta:"", q:"", vista:"feed", rango:"mes" };
 
+const TIPOS_CLIENTE = {growth:"Growth partner", closing:"Closing", consultoria:"Consultoría"};
+const CAT_TIPO = {growth:"Growth partner", closing:"Closing", consultoria:"Consultoría"};
 const FIJAS = ["Vivienda","Suscripciones","Servicios","Herramientas","Equipo","Salarios","Seguro","Deuda"];
 const AHORRO = ["Ahorro","Inversión"];
 
@@ -39,12 +41,13 @@ function defaultState(){
       objetivoPersonal: BRAND.objetivoPersonal, objetivoNegocio: BRAND.objetivoNegocio,
       moneda: "USD", tcCRC: 510,
       categorias: {
-        ingreso: ["Ventas","Comisión","Salario","Reembolso","Otro ingreso"],
+        ingreso: ["Growth partner","Closing","Consultoría","Ventas","Comisión","Reembolso","Otro ingreso"],
         gasto: ["Vivienda","Comida","Transporte","Suscripciones","Herramientas","Equipo","Ads","Salarios","Servicios","Salud","Viajes","Ropa","Ocio","Educación","Impuestos","Seguro","Deuda","Ahorro","Inversión","Otro gasto"]
       }
     },
     cuentas: [],      // [{id,nombre,tipo,moneda,inicial,ambito,demo}]
-    clientes: [],     // [{id,nombre,servicio,total,estado,cuenta,notas,cuotas:[{id,label,monto,fecha,pagada}],demo}]
+    clientes: [],     // [{id,nombre,servicio,tipo:'growth'|'closing'|'consultoria',pct,total,estado,cuenta,notas,cuotas:[...],demo}]
+    cobros: [],       // cash collected: [{id,fecha,clienteId,bruto,pct,mio,concepto,pagado,movId,demo}]
     recurrentes: []   // [{id,nombre,monto,dia,cuenta,ambito,categoria,activo,demo}]
   };
 }
@@ -97,7 +100,7 @@ function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("sh
 function saveLocal(){ if(sb) return; try{ localStorage.setItem(STORE_KEY, JSON.stringify({movs:MOVS, state:STATE})); }catch(e){} }
 function loadLocal(){
   try{ const raw=localStorage.getItem(STORE_KEY); if(!raw) return; const d=JSON.parse(raw);
-    MOVS = d.movs||[]; STATE = Object.assign(defaultState(), d.state||{});
+    MOVS = d.movs||[]; STATE = Object.assign(defaultState(), d.state||{}); if(!STATE.cobros) STATE.cobros=[];
     STATE.config = Object.assign(defaultState().config, STATE.config||{});
   }catch(e){}
 }
@@ -167,6 +170,20 @@ function burnPromedio(){ // promedio de gastos de los últimos 3 meses cerrados 
   if(!n){ const t=totales(MONTH); return t.gasto; } return sum/n;
 }
 function clienteCobrado(cl){ return MOVS.filter(m=>m.tipo==="ingreso" && m.cliente===cl.nombre).reduce((a,m)=>a+toUSD(m),0); }
+function cobrosDe(cl){ return (STATE.cobros||[]).filter(c=>c.clienteId===cl.id); }
+function clienteBruto(cl){ return cobrosDe(cl).reduce((a,c)=>a+(Number(c.bruto)||0),0); }
+function clienteDevengado(cl){ return cobrosDe(cl).reduce((a,c)=>a+(Number(c.mio)||0),0); }
+function clientePendiente(cl){ return Math.max(0, clienteDevengado(cl)-clienteCobrado(cl)); }
+function cobrosPendientes(){ return (STATE.cobros||[]).filter(c=>!c.pagado).map(c=>({c, cl:STATE.clientes.find(x=>x.id===c.clienteId)})).filter(x=>x.cl).sort((a,b)=>(a.c.fecha||"").localeCompare(b.c.fecha||"")); }
+function pctCliente(cl){ return cl.tipo==="consultoria" ? 100 : (Number(cl.pct)||0); }
+async function seedClientesReales(){
+  if(STATE.config.seedClientes) return;
+  if(!STATE.clientes.some(c=>!c.demo)){
+    [["Estiven","Growth partner",25],["Amelia","Growth partner",12.5],["Tony","Growth partner",27.5]].forEach(([n,sv,p])=>STATE.clientes.push({id:uid(),nombre:n,servicio:sv,tipo:"growth",pct:p,total:0,estado:"activo",cuenta:"",notas:"",cuotas:[]}));
+    await saveState("clientes");
+  }
+  STATE.config.seedClientes=true; await saveState("config");
+}
 function cuotasPendientes(){
   const out=[]; STATE.clientes.forEach(cl=>(cl.cuotas||[]).forEach(q=>{ if(!q.pagada) out.push({cl,q}); }));
   return out.sort((a,b)=>(a.q.fecha||"9999").localeCompare(b.q.fecha||"9999"));
@@ -189,7 +206,7 @@ function render(){
   $$("#views button").forEach(b=>b.classList.toggle("active", b.dataset.view===VIEW));
   $$(".view").forEach(v=>v.classList.toggle("hidden", v.id!=="view-"+VIEW));
   $("#n-movs").textContent = movsMes(MONTH).length || "";
-  $("#n-cobros").textContent = cuotasPendientes().filter(x=>x.q.fecha && x.q.fecha<=todayStr()).length || "";
+  $("#n-cobros").textContent = (cobrosPendientes().length + cuotasPendientes().filter(x=>x.q.fecha && x.q.fecha<=todayStr()).length) || "";
   $("#capture").classList.toggle("hidden", VIEW==="config");
   ({mando:renderMando, movs:renderMovs, clientes:renderClientes, recurrentes:renderRecurrentes, config:renderConfig})[VIEW]();
 }
@@ -288,11 +305,11 @@ function renderWallets(){
     <div class="t">${esc(c.tipo||"")}${c.moneda&&c.moneda!=="USD"?" · "+esc(c.moneda):""}</div></div>`; }).join("")}</div>`;
 }
 function renderPendientesCobro(){
-  const p=cuotasPendientes().filter(x=>SCOPE!=="personal").slice(0,6);
   if(SCOPE==="personal") return `<div class="empty" style="padding:18px">Los cobros viven en el ámbito negocio.</div>`;
-  if(!p.length) return `<div class="empty" style="padding:18px">Nada pendiente de cobro.<br><span class="dim">Cargá clientes con su plan de cuotas.</span></div>`;
+  const cp=cobrosPendientes().slice(0,6); const p=cuotasPendientes().slice(0,Math.max(0,6-cp.length));
+  if(!cp.length && !p.length) return `<div class="empty" style="padding:18px">Nada pendiente de cobro.<br><span class="dim">Registrá cash collected de un cliente y marcá si ya te pagaron tu parte.</span></div>`;
   const hoy=todayStr();
-  return `<div class="list">${p.map(({cl,q})=>`<div class="row click" onclick="cobrarCuota('${cl.id}','${q.id}')">
+  return `<div class="list">${cp.map(({c,cl})=>`<div class="row click" onclick="cobrarPendiente('${c.id}')"><div class="a"><b>${esc(cl.nombre)} · ${pctCliente(cl)}% de ${fmt(c.bruto)}</b><small>${esc(c.concepto||"cash collected")} · ${esc(c.fecha)}</small></div><div class="b">${fmt(c.mio)}<small>cobrar →</small></div></div>`).join("")}${p.map(({cl,q})=>`<div class="row click" onclick="cobrarCuota('${cl.id}','${q.id}')">
     <div class="a"><b>${esc(cl.nombre)} · ${esc(q.label||"cuota")}</b><small>${q.fecha ? (q.fecha<hoy?`<span class="bad">vencida ${esc(q.fecha)}</span>`:`vence ${esc(q.fecha)}`) : "sin fecha"}</small></div>
     <div class="b">${fmt(q.monto)}<small>cobrar →</small></div></div>`).join("")}</div>`;
 }
@@ -397,6 +414,12 @@ function renderMovs(){
     <div class="seg"><button data-vista="feed" class="${f.vista==="feed"?"active":""}">Feed</button><button data-vista="tabla" class="${f.vista==="tabla"?"active":""}">Tabla</button></div>
     <button class="btn sm" onclick="exportCSV()">CSV</button>
   </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 10px">
+    <button class="btn gold sm" onclick="openCobro()">+ Cash collected de cliente</button>
+    <button class="btn sm" onclick="openMov(null,{tipo:'ingreso',ambito:'negocio'})">+ Ingreso</button>
+    <button class="btn sm" onclick="openMov(null,{tipo:'gasto'})">− Gasto</button>
+    <button class="btn sm ghost" onclick="openTransfer()">⇄ Transferencia</button>
+  </div>
   <div class="mini" style="display:flex;gap:18px;flex-wrap:wrap"><span>${list.length} movimientos</span><span>entró <b class="ember">${fmt(sumI)}</b></span><span>salió <b class="bad">${fmt(sumG)}</b></span><span>neto <b>${fmt(sumI-sumG)}</b></span></div>
   ${!list.length ? `<div class="empty"><div class="g">NADA POR ACÁ</div>Escribí arriba algo como <span class="mono">-12 café #comida @efectivo p</span> y Enter.</div>` : f.vista==="tabla" ? renderTabla(list) : renderFeed(list)}`;
   $("#f-rango").onchange=e=>{f.rango=e.target.value;render();};
@@ -440,41 +463,99 @@ function download(name, content, type){ const a=document.createElement("a"); a.h
    VISTA · CLIENTES & COBROS
    ============================================================ */
 function renderClientes(){
-  const el=$("#view-clientes"); const cls=STATE.clientes.slice().sort((a,b)=>(a.estado==="cerrado")-(b.estado==="cerrado"));
-  const totC=cls.reduce((a,c)=>a+(Number(c.total)||0),0), cob=cls.reduce((a,c)=>a+clienteCobrado(c),0);
-  const pend=cuotasPendientes(); const hoy=todayStr();
+  const el=$("#view-clientes"); const cls=STATE.clientes.slice();
+  const bruto=cls.reduce((a,c)=>a+clienteBruto(c),0), dev=cls.reduce((a,c)=>a+clienteDevengado(c),0), cob=cls.reduce((a,c)=>a+clienteCobrado(c),0);
+  const pendC=cobrosPendientes(); const pendQ=cuotasPendientes(); const hoy=todayStr();
+  const pend=pendC.reduce((a,x)=>a+(Number(x.c.mio)||0),0)+pendQ.reduce((a,x)=>a+(Number(x.q.monto)||0),0);
+  const card=c=>{ const b=clienteBruto(c), d=clienteDevengado(c), k=clienteCobrado(c), pz=clientePendiente(c); const pct=d?Math.min(100,k/d*100):0;
+    return `<div class="client" onclick="openClienteDetalle('${c.id}')">
+      <div class="top"><div><div class="nm">${esc(c.nombre)}</div><div class="sv">${esc(c.servicio||TIPOS_CLIENTE[c.tipo]||"")}</div></div><span class="tag ${c.estado==="activo"?"ember":c.estado==="cerrado"?"":"warn"}">${pctCliente(c)}%${c.estado!=="activo"?" · "+esc(c.estado):""}</span></div>
+      <div class="nums"><div><div class="l">Cash collected</div><div class="v">${fmt(b)}</div></div><div><div class="l">Mi parte</div><div class="v ember">${fmt(d)}</div></div><div><div class="l">${pz>0?"Pendiente":"Cobrado"}</div><div class="v ${pz>0?"":"dim"}">${fmt(pz>0?pz:k)}</div></div></div>
+      <div class="prog"><i class="${pct>=100?"full":""}" style="width:${pct}%"></i></div>
+      <div class="next"><span>cobrado ${fmt(k)} de ${fmt(d)}</span><b>${pct.toFixed(0)}%</b></div></div>`; };
+  const grupo=(t)=>{ const g=cls.filter(c=>(c.tipo||"growth")===t); if(!g.length) return ""; return `<section class="panel flat" style="padding:0;border:0;margin-top:18px"><h3>${TIPOS_CLIENTE[t]} <span class="sub">${g.length} ${g.length===1?"cliente":"clientes"} · ${fmt(g.reduce((a,c)=>a+clienteDevengado(c),0))} devengado</span></h3><div class="clients">${g.map(card).join("")}</div></section>`; };
   el.innerHTML=`
   <div class="burn" style="margin-top:18px">
-    <div class="subkpi"><div class="l">Contratado</div><div class="v">${fmt(totC)}</div><div class="s">${cls.length} clientes</div></div>
-    <div class="subkpi"><div class="l">Cobrado</div><div class="v ember">${fmt(cob)}</div><div class="s">${totC?((cob/totC)*100).toFixed(0):0}% del contratado</div></div>
-    <div class="subkpi"><div class="l">Por cobrar</div><div class="v">${fmt(pend.reduce((a,x)=>a+(Number(x.q.monto)||0),0))}</div><div class="s">${pend.filter(x=>x.q.fecha&&x.q.fecha<hoy).length} vencidas</div></div>
-    <div class="subkpi" style="display:flex;align-items:center;justify-content:center"><button class="btn gold" onclick="openCliente()">+ Cliente</button></div>
+    <div class="subkpi"><div class="l">Cash collected clientes</div><div class="v">${fmt(bruto)}</div><div class="s">${cls.length} clientes</div></div>
+    <div class="subkpi"><div class="l">Mi parte devengada</div><div class="v ember">${fmt(dev)}</div><div class="s">${bruto?((dev/bruto)*100).toFixed(1):0}% efectivo</div></div>
+    <div class="subkpi"><div class="l">Cobrado</div><div class="v">${fmt(cob)}</div><div class="s">${dev?((cob/dev)*100).toFixed(0):0}% de lo devengado</div></div>
+    <div class="subkpi"><div class="l">Por cobrar</div><div class="v ${pend>0?"bad":""}">${fmt(pend)}</div><div class="s">${pendC.length+pendQ.length} pendientes</div></div>
+    <div class="subkpi" style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap"><button class="btn gold sm" onclick="openCobro()">+ Cash collected</button><button class="btn sm" onclick="openCliente()">+ Cliente</button></div>
   </div>
-  ${!cls.length?`<div class="empty"><div class="g">SIN CLIENTES</div>Cada cliente lleva su contrato, plan de cuotas y lo cobrado. Los cobros se registran como ingresos del negocio con un clic.</div>`:""}
-  <div class="clients">${cls.map(c=>{ const cob=clienteCobrado(c); const tot=Number(c.total)||0; const pct=tot?Math.min(100,cob/tot*100):0; const next=(c.cuotas||[]).filter(q=>!q.pagada).sort((a,b)=>(a.fecha||"9999").localeCompare(b.fecha||"9999"))[0];
-    return `<div class="client" onclick="openCliente('${c.id}')">
-      <div class="top"><div><div class="nm">${esc(c.nombre)}</div><div class="sv">${esc(c.servicio||"")}</div></div><span class="tag ${c.estado==="activo"?"ok":c.estado==="cerrado"?"":"warn"}">${esc(c.estado||"activo")}</span></div>
-      <div class="nums"><div><div class="l">Contrato</div><div class="v">${fmt(tot)}</div></div><div><div class="l">Cobrado</div><div class="v ember">${fmt(cob)}</div></div><div><div class="l">Pendiente</div><div class="v ${tot-cob>0?"":"dim"}">${fmt(Math.max(0,tot-cob))}</div></div></div>
-      <div class="prog"><i class="${pct>=100?"full":""}" style="width:${pct}%"></i></div>
-      <div class="next"><span>${next?`próx. ${esc(next.label||"cuota")}`:"sin cuotas pendientes"}</span><b>${next?`${fmt(next.monto)} · ${esc(next.fecha||"s/f")}`:"✓"}</b></div>
-    </div>`; }).join("")}</div>
-  <section class="panel" style="margin-top:18px"><h3>Plan de cobros <span class="sub">todas las cuotas pendientes, por fecha</span></h3>
-    ${!pend.length?`<div class="empty" style="padding:14px">Nada pendiente.</div>`:`<div class="list">${pend.map(({cl,q})=>`<div class="row click" onclick="cobrarCuota('${cl.id}','${q.id}')"><div class="a"><b>${esc(cl.nombre)} · ${esc(q.label||"cuota")}</b><small>${q.fecha?(q.fecha<hoy?`<span class="bad">vencida · ${esc(q.fecha)}</span>`:esc(q.fecha)):"sin fecha"}</small></div><div class="b">${fmt(q.monto)}<small>cobrar →</small></div></div>`).join("")}</div>`}
+  ${!cls.length?`<div class="empty"><div class="g">SIN CLIENTES</div>Cada cliente lleva su cash collected, tu porcentaje y lo que ya te pagaron.</div>`:""}
+  ${grupo("growth")}${grupo("closing")}${grupo("consultoria")}
+  <section class="grid g-2">
+    <div class="panel"><h3>Pendiente de cobro <span class="sub">tu parte que aún no entró</span></h3>
+      ${!pendC.length&&!pendQ.length?`<div class="empty" style="padding:14px">Nada pendiente.</div>`:`<div class="list">${pendC.map(({c,cl})=>`<div class="row click" onclick="cobrarPendiente('${c.id}')"><div class="a"><b>${esc(cl.nombre)} · ${pctCliente(cl)}% de ${fmt(c.bruto)}</b><small>${esc(c.concepto||"cash collected")} · ${esc(c.fecha)}</small></div><div class="b">${fmt(c.mio)}<small>cobrar →</small></div></div>`).join("")}${pendQ.map(({cl,q})=>`<div class="row click" onclick="cobrarCuota('${cl.id}','${q.id}')"><div class="a"><b>${esc(cl.nombre)} · ${esc(q.label||"cuota")}</b><small>${q.fecha?(q.fecha<hoy?`<span class="bad">vencida · ${esc(q.fecha)}</span>`:esc(q.fecha)):"sin fecha"}</small></div><div class="b">${fmt(q.monto)}<small>cobrar →</small></div></div>`).join("")}</div>`}
+    </div>
+    <div class="panel"><h3>Historial cash collected <span class="sub">últimos registros</span></h3>
+      ${!(STATE.cobros||[]).length?`<div class="empty" style="padding:14px">Todavía no registraste cash collected.</div>`:`<div class="list">${STATE.cobros.slice().sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")).slice(0,12).map(c=>{ const cl=STATE.clientes.find(x=>x.id===c.clienteId); return `<div class="row click" onclick="openCobro(null,'${c.id}')"><div class="a"><b>${esc(cl?cl.nombre:"—")} · ${fmt(c.bruto)}</b><small>${esc(c.fecha)} · ${esc(c.concepto||"")} · ${c.pct}%</small></div><div class="b">${fmt(c.mio)}<small>${c.pagado?'<span class="ok">cobrado</span>':'<span class="warn">pendiente</span>'}</small></div></div>`; }).join("")}</div>`}
+    </div>
   </section>`;
 }
+function openClienteDetalle(id){
+  const c=STATE.clientes.find(x=>x.id===id); if(!c) return;
+  const list=cobrosDe(c).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+  const movs=MOVS.filter(m=>m.tipo==="ingreso"&&m.cliente===c.nombre).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  openModal({ title:`<i>›</i> ${esc(c.nombre)}`, saveLabel:"Editar cliente", body:`
+    <div class="burn" style="margin:0 0 4px"><div class="subkpi"><div class="l">Cash collected</div><div class="v">${fmt(clienteBruto(c))}</div></div><div class="subkpi"><div class="l">Mi ${pctCliente(c)}%</div><div class="v ember">${fmt(clienteDevengado(c))}</div></div><div class="subkpi"><div class="l">Cobrado</div><div class="v">${fmt(clienteCobrado(c))}</div></div><div class="subkpi"><div class="l">Pendiente</div><div class="v ${clientePendiente(c)>0?"bad":"dim"}">${fmt(clientePendiente(c))}</div></div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn gold sm" onclick="closeModal();openCobro('${c.id}')">+ Cash collected</button><button type="button" class="btn sm" onclick="closeModal();openMov(null,{tipo:'ingreso',ambito:'negocio',cliente:'${esc(c.nombre)}',categoria:'${CAT_TIPO[c.tipo]||"Ventas"}',cuenta:'${esc(c.cuenta||"")}'})">+ Pago recibido</button></div>
+    <div class="f"><label>Cash collected registrado</label>${!list.length?`<div class="mini">Nada todavía.</div>`:`<div class="list">${list.slice(0,15).map(x=>`<div class="row click" onclick="closeModal();openCobro(null,'${x.id}')"><div class="a"><b>${fmt(x.bruto)} · ${esc(x.concepto||"cash collected")}</b><small>${esc(x.fecha)} · ${x.pct}%</small></div><div class="b">${fmt(x.mio)}<small>${x.pagado?'<span class="ok">cobrado</span>':'<span class="warn">pendiente</span>'}</small></div></div>`).join("")}</div>`}</div>
+    <div class="f"><label>Pagos recibidos (movimientos)</label>${!movs.length?`<div class="mini">Ninguno.</div>`:`<div class="list">${movs.slice(0,10).map(m=>`<div class="row click" onclick="closeModal();openMov('${m.id}')"><div class="a"><b>${esc(m.concepto||m.categoria)}</b><small>${esc(m.fecha)} · @${esc(m.cuenta||"—")}</small></div><div class="b ember">+${fmt(toUSD(m))}</div></div>`).join("")}</div>`}</div>`,
+    onSave(){ closeModal(); openCliente(id); return false; }
+  });
+}
+function openCobro(clienteId, cobroId){
+  const c = cobroId ? STATE.cobros.find(x=>x.id===cobroId) : {id:uid(), fecha:todayStr(), clienteId:clienteId||(STATE.clientes[0]||{}).id||"", bruto:"", pct:null, mio:0, concepto:"", pagado:false, movId:""};
+  if(!STATE.clientes.length){ toast("Primero creá un cliente"); openCliente(); return; }
+  const cl=()=>{ const el=$("#cb-cl"); return STATE.clientes.find(x=>x.id===(el?el.value:c.clienteId)); };
+  const cl0=STATE.clientes.find(x=>x.id===c.clienteId)||STATE.clientes[0];
+  openModal({ title: cobroId?"Editar <i>cash collected</i>":"Cash collected <i>de cliente</i>", del:!!cobroId, body:`
+    <div class="f2"><div class="f"><label>Cliente</label><select id="cb-cl">${STATE.clientes.map(x=>`<option value="${x.id}" ${x.id===c.clienteId?"selected":""}>${esc(x.nombre)} · ${pctCliente(x)}%</option>`).join("")}</select></div><div class="f"><label>Fecha</label><input id="cb-fecha" type="date" value="${esc(c.fecha)}" /></div></div>
+    <div class="f3"><div class="f"><label>Cash collected del cliente (USD)</label><input id="cb-bruto" class="mono" type="number" step="0.01" value="${c.bruto}" autofocus /></div><div class="f"><label>Mi %</label><input id="cb-pct" class="mono" type="number" step="0.1" value="${c.pct!=null?c.pct:""}" /></div><div class="f"><label>Mi parte</label><div id="cb-mio" style="font-family:var(--num);font-size:26px;color:var(--gold-2);padding-top:4px">$0</div></div></div>
+    <div class="f"><label>Concepto</label><input id="cb-conc" value="${esc(c.concepto)}" placeholder="Ej: cierres semana 1, lanzamiento octubre" /></div>
+    <div class="f"><label>¿Ya recibí mi parte?</label><div class="pick" id="cb-pag"><button type="button" data-v="0" class="${!c.pagado?"on":""}">Todavía no · queda pendiente</button><button type="button" data-v="1" class="${c.pagado?"on ember":""}">Sí · registrar ingreso</button></div></div>
+    <div class="f ${c.pagado&&!c.movId?"":"hidden"}" id="cb-cta-wrap"><label>Entró en</label><select id="cb-cta"><option value="">—</option>${STATE.cuentas.map(k=>`<option ${(cl0&&cl0.cuenta===k.nombre)?"selected":""}>${esc(k.nombre)}</option>`).join("")}</select></div>
+    <div class="mini" id="cb-nota">${c.movId?"Este cobro ya tiene su ingreso registrado en Movimientos.":"Si marcás «Sí», se crea el ingreso en Movimientos con tu parte."}</div>`,
+    onOpen(){
+      const upd=()=>{ const b=Number($("#cb-bruto").value)||0; const p=Number($("#cb-pct").value); $("#cb-mio").textContent=fmt(b*(isNaN(p)?0:p)/100); };
+      const syncPct=()=>{ const k=cl(); if(k && ($("#cb-pct").value===""||!cobroId)) $("#cb-pct").value=pctCliente(k); upd(); };
+      $("#cb-cl").onchange=syncPct; $("#cb-bruto").oninput=upd; $("#cb-pct").oninput=upd;
+      if(c.pct==null) syncPct(); else upd();
+      pickInit("#cb-pag", v=>{ $("#cb-cta-wrap").classList.toggle("hidden", v!=="1" || !!c.movId); });
+    },
+    async onSave(){
+      const k=cl(); const bruto=Number($("#cb-bruto").value); if(!k||!(bruto>0)){ toast("Falta el monto"); return false; }
+      const pct=Number($("#cb-pct").value)||0; const mio=Math.round(bruto*pct)/100;
+      Object.assign(c,{fecha:$("#cb-fecha").value||todayStr(), clienteId:k.id, bruto, pct, mio, concepto:$("#cb-conc").value.trim(), pagado:pickVal("#cb-pag")==="1"});
+      if(c.pagado && !c.movId){ const m=await addMov({fecha:c.fecha, ambito:"negocio", tipo:"ingreso", monto:mio, cuenta:$("#cb-cta").value, categoria:CAT_TIPO[k.tipo]||"Ventas", concepto:`${k.nombre} · ${pct}% de ${fmt(bruto)}${c.concepto?" · "+c.concepto:""}`, cliente:k.nombre}); c.movId=m.id; }
+      else if(c.movId){ await updMov(c.movId,{fecha:c.fecha, monto:mio, cliente:k.nombre, concepto:`${k.nombre} · ${pct}% de ${fmt(bruto)}${c.concepto?" · "+c.concepto:""}`}); if(!c.pagado){ await delMov(c.movId); c.movId=""; } }
+      if(!cobroId) STATE.cobros.push(c); await saveState("cobros"); toast(c.pagado?`+${fmt(mio)} cobrado`:`${fmt(mio)} pendiente de cobro`); render();
+    },
+    async onDelete(){ if(c.movId && confirm("¿Borrar también el ingreso asociado en Movimientos?")) await delMov(c.movId); STATE.cobros=STATE.cobros.filter(x=>x.id!==cobroId); await saveState("cobros"); render(); }
+  });
+}
+async function cobrarPendiente(cobroId){
+  const c=STATE.cobros.find(x=>x.id===cobroId); const k=c&&STATE.clientes.find(x=>x.id===c.clienteId); if(!c||!k) return;
+  openMov(null, {tipo:"ingreso", ambito:"negocio", monto:c.mio, cliente:k.nombre, categoria:CAT_TIPO[k.tipo]||"Ventas", cuenta:k.cuenta||"", concepto:`${k.nombre} · ${c.pct}% de ${fmt(c.bruto)}${c.concepto?" · "+c.concepto:""}`, _cobro:cobroId});
+}
 function openCliente(id){
-  const c = id ? STATE.clientes.find(x=>x.id===id) : {id:uid(), nombre:"", servicio:"", total:0, estado:"activo", cuenta:"", notas:"", cuotas:[]};
+  const c = id ? STATE.clientes.find(x=>x.id===id) : {id:uid(), nombre:"", servicio:"", tipo:"growth", pct:25, total:0, estado:"activo", cuenta:"", notas:"", cuotas:[]};
   const cuotas = JSON.parse(JSON.stringify(c.cuotas||[]));
   const body=()=>`
-    <div class="f2"><div class="f"><label>Cliente</label><input id="c-nombre" value="${esc(c.nombre)}" placeholder="Nombre" /></div><div class="f"><label>Servicio</label><input id="c-serv" value="${esc(c.servicio)}" placeholder="Ej: Growth partner 3 meses" /></div></div>
-    <div class="f3"><div class="f"><label>Contrato total (USD)</label><input id="c-total" class="mono" type="number" step="0.01" value="${c.total||""}" /></div>
+    <div class="f2"><div class="f"><label>Cliente</label><input id="c-nombre" value="${esc(c.nombre)}" placeholder="Nombre" /></div><div class="f"><label>Servicio / nota corta</label><input id="c-serv" value="${esc(c.servicio)}" placeholder="Ej: Growth partner · webinar" /></div></div>
+    <div class="f"><label>Fuente de ingreso</label><div class="pick" id="c-tipo"><button type="button" data-v="growth" class="${(c.tipo||"growth")==="growth"?"on ember":""}">Growth partner (%)</button><button type="button" data-v="closing" class="${c.tipo==="closing"?"on":""}">Closing (%)</button><button type="button" data-v="consultoria" class="${c.tipo==="consultoria"?"on":""}">Consultoría (100%)</button></div></div>
+    <div class="f3"><div class="f" id="c-pct-wrap"><label>Mi % del cash collected</label><input id="c-pct" class="mono" type="number" step="0.1" value="${c.pct!=null?c.pct:25}" /></div>
       <div class="f"><label>Estado</label><select id="c-estado">${["activo","pausa","cerrado"].map(s=>`<option ${c.estado===s?"selected":""}>${s}</option>`).join("")}</select></div>
       <div class="f"><label>Cobra en</label><select id="c-cuenta"><option value="">— cuenta —</option>${STATE.cuentas.map(k=>`<option ${c.cuenta===k.nombre?"selected":""}>${esc(k.nombre)}</option>`).join("")}</select></div></div>
-    <div class="f"><label>Plan de cuotas <button class="btn xs ghost" type="button" id="c-add" style="margin-left:8px">+ cuota</button> <button class="btn xs ghost" type="button" id="c-split" style="margin-left:4px">dividir total en N</button></label>
+    <div class="f2"><div class="f"><label>Contrato fijo total (opcional, USD)</label><input id="c-total" class="mono" type="number" step="0.01" value="${c.total||""}" /></div><div class="f"><label></label><div class="mini">Solo para consultoría o fee fijo con cuotas.</div></div></div>
+    <div class="f"><label>Plan de cuotas (opcional) <button class="btn xs ghost" type="button" id="c-add" style="margin-left:8px">+ cuota</button> <button class="btn xs ghost" type="button" id="c-split" style="margin-left:4px">dividir total en N</button></label>
       <div class="cuota-list" id="c-cuotas"></div></div>
     <div class="f"><label>Notas</label><textarea id="c-notas">${esc(c.notas)}</textarea></div>`;
   openModal({ title: id ? `<i>›</i> ${esc(c.nombre)}` : "Nuevo <i>cliente</i>", body: body(), del: !!id,
     onOpen(){
+      pickInit("#c-tipo", v=>{ $("#c-pct-wrap").classList.toggle("hidden", v==="consultoria"); if(v==="consultoria") $("#c-pct").value=100; });
+      $("#c-pct-wrap").classList.toggle("hidden", (c.tipo||"growth")==="consultoria");
       const list=$("#c-cuotas");
       const draw=()=>{ list.innerHTML = cuotas.length ? cuotas.map((q,i)=>`<div class="cuota"><input data-i="${i}" data-k="label" value="${esc(q.label)}" placeholder="Cuota ${i+1}" /><input data-i="${i}" data-k="monto" type="number" step="0.01" value="${q.monto||""}" placeholder="USD" /><input data-i="${i}" data-k="fecha" type="date" value="${esc(q.fecha||"")}" /><button type="button" class="chk ${q.pagada?"on":""}" data-i="${i}" title="pagada">✓</button><button type="button" class="del" data-i="${i}">×</button></div>`).join("") : `<div class="mini">Sin cuotas. Agregá una o dividí el total.</div>`;
         $$("input",list).forEach(inp=>inp.oninput=e=>{ cuotas[+inp.dataset.i][inp.dataset.k]= inp.dataset.k==="monto"?Number(inp.value):inp.value; });
@@ -487,15 +568,15 @@ function openCliente(id){
     },
     async onSave(){
       c.nombre=$("#c-nombre").value.trim(); if(!c.nombre){toast("Falta el nombre");return false;}
-      c.servicio=$("#c-serv").value.trim(); c.total=Number($("#c-total").value)||0; c.estado=$("#c-estado").value; c.cuenta=$("#c-cuenta").value; c.notas=$("#c-notas").value; c.cuotas=cuotas;
+      c.servicio=$("#c-serv").value.trim(); c.tipo=pickVal("#c-tipo")||"growth"; c.pct=c.tipo==="consultoria"?100:(Number($("#c-pct").value)||0); c.total=Number($("#c-total").value)||0; c.estado=$("#c-estado").value; c.cuenta=$("#c-cuenta").value; c.notas=$("#c-notas").value; c.cuotas=cuotas;
       if(!id) STATE.clientes.push(c); await saveState("clientes"); toast("Cliente guardado"); render();
     },
-    async onDelete(){ if(!confirm(`¿Borrar a ${c.nombre}? Los ingresos ya registrados quedan.`)) return false; STATE.clientes=STATE.clientes.filter(x=>x.id!==id); await saveState("clientes"); render(); }
+    async onDelete(){ if(!confirm(`¿Borrar a ${c.nombre}? Los ingresos ya registrados quedan.`)) return false; STATE.clientes=STATE.clientes.filter(x=>x.id!==id); STATE.cobros=(STATE.cobros||[]).filter(x=>x.clienteId!==id); await saveState("clientes"); await saveState("cobros"); render(); }
   });
 }
 async function cobrarCuota(cid, qid){
   const c=STATE.clientes.find(x=>x.id===cid); if(!c) return; const q=(c.cuotas||[]).find(x=>x.id===qid); if(!q) return;
-  openMov(null, {tipo:"ingreso", ambito:"negocio", monto:q.monto, cliente:c.nombre, categoria:"Ventas", cuenta:c.cuenta||"", concepto:`${c.nombre} · ${q.label||"cuota"}`, _cuota:{cid,qid}});
+  openMov(null, {tipo:"ingreso", ambito:"negocio", monto:q.monto, cliente:c.nombre, categoria:CAT_TIPO[c.tipo]||"Ventas", cuenta:c.cuenta||"", concepto:`${c.nombre} · ${q.label||"cuota"}`, _cuota:{cid,qid}});
 }
 
 /* ============================================================
@@ -603,10 +684,10 @@ function openTransfer(){ openMov(null,{tipo:"transfer"}); }
 function exportJSON(){ download(`primal-backup-${todayStr()}.json`, JSON.stringify({movs:MOVS,state:STATE,exported:new Date().toISOString()},null,2), "application/json"); }
 function importJSON(inp){ const f=inp.files[0]; if(!f) return; const r=new FileReader(); r.onload=async()=>{ try{ const d=JSON.parse(r.result); if(!confirm(`Importar ${(d.movs||[]).length} movimientos y reemplazar config/cuentas/clientes/recurrentes?`)) return;
   MOVS=d.movs||[]; STATE=Object.assign(defaultState(), d.state||{});
-  if(sb){ await sb.from("pg_movimientos").delete().neq("id","00000000-0000-0000-0000-000000000000"); if(MOVS.length) await sb.from("pg_movimientos").insert(MOVS); for(const k of ["config","cuentas","clientes","recurrentes"]) await saveState(k); } else saveLocal();
+  if(sb){ await sb.from("pg_movimientos").delete().neq("id","00000000-0000-0000-0000-000000000000"); if(MOVS.length) await sb.from("pg_movimientos").insert(MOVS); for(const k of ["config","cuentas","clientes","cobros","recurrentes"]) await saveState(k); } else saveLocal();
   toast("Importado"); render(); }catch(e){ toast("JSON inválido"); } }; r.readAsText(f); }
 async function resetAll(){ if(!confirm("¿Borrar TODO (movimientos, cuentas, clientes, recurrentes)? No se puede deshacer.")) return; if(!confirm("Última: ¿seguro?")) return;
-  MOVS=[]; STATE=defaultState(); if(sb){ await sb.from("pg_movimientos").delete().neq("id","00000000-0000-0000-0000-000000000000"); for(const k of ["config","cuentas","clientes","recurrentes"]) await saveState(k); } else { localStorage.removeItem(STORE_KEY); } toast("Base en cero"); render(); }
+  MOVS=[]; STATE=defaultState(); if(sb){ await sb.from("pg_movimientos").delete().neq("id","00000000-0000-0000-0000-000000000000"); for(const k of ["config","cuentas","clientes","cobros","recurrentes"]) await saveState(k); } else { localStorage.removeItem(STORE_KEY); } toast("Base en cero"); render(); }
 
 /* ============================================================
    MOVIMIENTO · modal + captura rápida
@@ -637,6 +718,7 @@ function openMov(id, preset={}){
       const patch={fecha:$("#m-fecha").value||todayStr(), tipo:pickVal("#m-tipo"), ambito:pickVal("#m-amb"), monto, moneda:$("#m-mon").value, concepto:$("#m-conc").value.trim(), categoria:pickVal("#m-tipo")==="transfer"?"":$("#m-cat").value, cuenta:$("#m-cta").value, cuenta_destino:pickVal("#m-tipo")==="transfer"?$("#m-dest").value:"", cliente:pickVal("#m-tipo")==="ingreso"?$("#m-cli").value.trim():"", notas:$("#m-notas").value};
       if(id) await updMov(id,patch); else await addMov(patch);
       if(preset._cuota){ const c=STATE.clientes.find(x=>x.id===preset._cuota.cid); const q=c&&(c.cuotas||[]).find(x=>x.id===preset._cuota.qid); if(q){ q.pagada=true; q.pagadaEl=patch.fecha; await saveState("clientes"); } }
+      if(preset._cobro){ const cb=STATE.cobros.find(x=>x.id===preset._cobro); if(cb){ cb.pagado=true; cb.movId=(MOVS[0]||{}).id||""; await saveState("cobros"); } }
       toast(id?"Actualizado":"Guardado"); render();
     },
     async onDelete(){ await delMov(id); toast("Borrado"); render(); }
@@ -670,7 +752,7 @@ function parseCapture(s){
   if(out.cuenta){ const k=STATE.cuentas.find(x=>x.nombre.toLowerCase()===out.cuenta.toLowerCase())||STATE.cuentas.find(x=>x.nombre.toLowerCase().startsWith(out.cuenta.toLowerCase())); out.cuenta=k?k.nombre:out.cuenta; }
   out.concepto=out.words.join(" ");
   // cliente: si el concepto empieza con el nombre de un cliente y es ingreso
-  out.cliente=""; if(out.tipo==="ingreso"){ const cl=STATE.clientes.find(c=>out.concepto.toLowerCase().startsWith(c.nombre.toLowerCase())); if(cl){ out.cliente=cl.nombre; out.ambito="negocio"; if(!out.categoria) out.categoria="Ventas"; } }
+  out.cliente=""; if(out.tipo==="ingreso"){ const cl=STATE.clientes.find(c=>out.concepto.toLowerCase().startsWith(c.nombre.toLowerCase())); if(cl){ out.cliente=cl.nombre; out.ambito="negocio"; if(!out.categoria) out.categoria=CAT_TIPO[cl.tipo]||"Ventas"; } }
   return out;
 }
 function capturePreview(){
@@ -710,16 +792,20 @@ async function loadDemo(){
   const D=(ym,d)=>`${ym}-${String(Math.min(d,daysInMonth(ym))).padStart(2,"0")}`;
   STATE.cuentas=[{id:uid(),nombre:"BAC",tipo:"Banco",moneda:"USD",inicial:1800,ambito:"personal",demo:true},{id:uid(),nombre:"Wise",tipo:"Wise / Payoneer",moneda:"USD",inicial:4200,ambito:"negocio",demo:true},{id:uid(),nombre:"Efectivo",tipo:"Efectivo",moneda:"USD",inicial:900,ambito:"ambas",demo:true},{id:uid(),nombre:"USDT",tipo:"Cripto",moneda:"USDT",inicial:2500,ambito:"ambas",demo:true}];
   STATE.clientes=[
-    {id:uid(),nombre:"Cliente A",servicio:"Growth partner · 3 meses",total:7500,estado:"activo",cuenta:"Wise",notas:"",demo:true,cuotas:[{id:uid(),label:"Cuota 1/3",monto:2500,fecha:D(addMonths(m0,-2),5),pagada:true},{id:uid(),label:"Cuota 2/3",monto:2500,fecha:D(addMonths(m0,-1),5),pagada:true},{id:uid(),label:"Cuota 3/3",monto:2500,fecha:D(m0,5),pagada:false}]},
-    {id:uid(),nombre:"Cliente B",servicio:"Setup funnel + ads",total:4000,estado:"activo",cuenta:"Wise",notas:"",demo:true,cuotas:[{id:uid(),label:"50% inicio",monto:2000,fecha:D(addMonths(m0,-1),18),pagada:true},{id:uid(),label:"50% entrega",monto:2000,fecha:D(m0,20),pagada:false}]},
-    {id:uid(),nombre:"Cliente C",servicio:"Mentoría 1-1",total:1500,estado:"activo",cuenta:"USDT",notas:"",demo:true,cuotas:[{id:uid(),label:"Pago único",monto:1500,fecha:D(addMonths(m0,1),3),pagada:false}]},
-    {id:uid(),nombre:"Cliente D",servicio:"Growth partner · 3 meses (cerrado)",total:12000,estado:"cerrado",cuenta:"Wise",notas:"",demo:true,cuotas:[{id:uid(),label:"Cuota 1/3",monto:3200,fecha:D(addMonths(m0,-5),5),pagada:true},{id:uid(),label:"Cuota 2/3",monto:4500,fecha:D(addMonths(m0,-4),5),pagada:true},{id:uid(),label:"Cuota 3/3",monto:4300,fecha:D(addMonths(m0,-3),5),pagada:true}]}
+    {id:"demo-a",nombre:"Cliente A",servicio:"Growth partner · webinar",tipo:"growth",pct:25,total:0,estado:"activo",cuenta:"Wise",notas:"",demo:true,cuotas:[]},
+    {id:"demo-b",nombre:"Cliente B",servicio:"Closing · oferta high ticket",tipo:"closing",pct:10,total:0,estado:"activo",cuenta:"Wise",notas:"",demo:true,cuotas:[]},
+    {id:"demo-c",nombre:"Cliente C",servicio:"Consultoría 1-1",tipo:"consultoria",pct:100,total:1500,estado:"activo",cuenta:"USDT",notas:"",demo:true,cuotas:[{id:uid(),label:"Pago único",monto:1500,fecha:D(addMonths(m0,1),3),pagada:false}]},
+    {id:"demo-d",nombre:"Cliente D",servicio:"Growth partner (cerrado)",tipo:"growth",pct:27.5,total:0,estado:"cerrado",cuenta:"Wise",notas:"",demo:true,cuotas:[]}
   ];
+  STATE.cobros=[];
   STATE.recurrentes=[{id:uid(),nombre:"Alquiler",monto:650,dia:1,cuenta:"BAC",ambito:"personal",categoria:"Vivienda",activo:true,demo:true},{id:uid(),nombre:"Gym",monto:45,dia:3,cuenta:"BAC",ambito:"personal",categoria:"Salud",activo:true,demo:true},{id:uid(),nombre:"Claude + ChatGPT",monto:40,dia:8,cuenta:"Wise",ambito:"negocio",categoria:"Herramientas",activo:true,demo:true},{id:uid(),nombre:"GoHighLevel",monto:97,dia:12,cuenta:"Wise",ambito:"negocio",categoria:"Herramientas",activo:true,demo:true},{id:uid(),nombre:"Editor (freelance)",monto:400,dia:15,cuenta:"USDT",ambito:"negocio",categoria:"Salarios",activo:true,demo:true}];
   const movs=[]; const push=(ym,d,o)=>movs.push(Object.assign({id:uid(),fecha:D(ym,d),moneda:"USD",cuenta:"",cuenta_destino:"",categoria:"",concepto:"",cliente:"",notas:"",demo:true,created_at:new Date().toISOString()},o));
-  const ventas={5:[[3200,"Cliente D","Cuota 1/3"]],4:[[4500,"Cliente D","Cuota 2/3"]],3:[[4300,"Cliente D","Cuota 3/3"]],2:[[2500,"Cliente A","Cuota 1/3"]],1:[[2500,"Cliente A","Cuota 2/3"],[2000,"Cliente B","50% inicio"]],0:[]};
+  // cash collected de clientes (bruto) → mi parte = bruto × %
+  const cc={5:[["demo-d",11600,"Lanzamiento 1"]],4:[["demo-d",16400,"Lanzamiento 2"]],3:[["demo-d",15600,"Lanzamiento 3"]],2:[["demo-a",10000,"Webinar sept"]],1:[["demo-a",10000,"Webinar oct"],["demo-b",20000,"Cierres del mes"]],0:[["demo-a",7200,"Cierres semana 1",false]]};
   for(let i=5;i>=0;i--){ const ym=addMonths(m0,-i);
-    (ventas[i]||[]).forEach(v=>push(ym,5,{ambito:"negocio",tipo:"ingreso",monto:v[0],cuenta:"Wise",categoria:"Ventas",concepto:`${v[1]} · ${v[2]}`,cliente:v[1]}));
+    (cc[i]||[]).forEach(v=>{ const k=STATE.clientes.find(x=>x.id===v[0]); const pct=k.pct, mio=Math.round(v[1]*pct)/100, pagado=v[3]!==false; let movId="";
+      if(pagado){ const idm=uid(); movId=idm; movs.push({id:idm,fecha:D(ym,5),moneda:"USD",ambito:"negocio",tipo:"ingreso",monto:mio,cuenta:"Wise",cuenta_destino:"",categoria:CAT_TIPO[k.tipo],concepto:`${k.nombre} · ${pct}% de ${fmt(v[1])} · ${v[2]}`,cliente:k.nombre,notas:"",demo:true,created_at:new Date().toISOString()}); }
+      STATE.cobros.push({id:uid(),fecha:D(ym,5),clienteId:k.id,bruto:v[1],pct,mio,concepto:v[2],pagado,movId,demo:true}); });
     if(i%2===0) push(ym,1,{ambito:"negocio",tipo:"ingreso",monto:900+i*150,cuenta:"USDT",categoria:"Comisión",concepto:"Comisión referido"});
     if(i===1) push(ym,22,{ambito:"negocio",tipo:"ingreso",monto:1200,cuenta:"USDT",categoria:"Comisión",concepto:"Comisión afiliado"});
     push(ym,1,{ambito:"personal",tipo:"gasto",monto:650,cuenta:"BAC",categoria:"Vivienda",concepto:"Alquiler"});
@@ -737,12 +823,13 @@ async function loadDemo(){
   }
   movs.forEach(m=>{ if(m.fecha>hoy) m.fecha=hoy; });
   MOVS=movs.concat(MOVS);
-  if(sb){ await sb.from("pg_movimientos").insert(movs); for(const k of ["cuentas","clientes","recurrentes"]) await saveState(k); } else saveLocal();
+  if(sb){ await sb.from("pg_movimientos").insert(movs); for(const k of ["cuentas","clientes","cobros","recurrentes"]) await saveState(k); } else saveLocal();
   toast("Datos de ejemplo cargados"); render();
 }
 async function clearDemo(){
-  MOVS=MOVS.filter(m=>!m.demo); ["cuentas","clientes","recurrentes"].forEach(k=>STATE[k]=STATE[k].filter(x=>!x.demo));
-  if(sb){ await sb.from("pg_movimientos").delete().eq("demo",true); for(const k of ["cuentas","clientes","recurrentes"]) await saveState(k); } else saveLocal();
+  MOVS=MOVS.filter(m=>!m.demo); ["cuentas","clientes","cobros","recurrentes"].forEach(k=>STATE[k]=(STATE[k]||[]).filter(x=>!x.demo));
+  if(sb){ await sb.from("pg_movimientos").delete().eq("demo",true); for(const k of ["cuentas","clientes","cobros","recurrentes"]) await saveState(k); } else saveLocal();
+  await seedClientesReales();
   toast("Datos de ejemplo borrados"); render();
 }
 
@@ -763,5 +850,7 @@ window.addEventListener("DOMContentLoaded", async()=>{
   window.addEventListener("resize",redraw);
   if(window.ResizeObserver) new ResizeObserver(redraw).observe(document.querySelector(".shell"));
   if(sb){ setDb(false); await loadCloud(); subscribeCloud(); } else { loadLocal(); setDb(false); }
+  if(!STATE.cobros) STATE.cobros=[];
+  await seedClientesReales();
   render();
 });
