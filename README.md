@@ -4,11 +4,14 @@ CRM de finanzas personales + del negocio en un solo lugar. Misma arquitectura qu
 **HTML estático + Supabase (opcional) + GitHub + Vercel**. Sin build, sin Node.
 
 ## Qué tiene
-- **Barra de mando**: ámbito (Todo / Personal / Negocio), mes, estado de la nube.
-- **Captura rápida** (línea de comando): `-45 uber #transporte @bac p` → Enter. `+2500 Cliente cuota 1/3 #ventas @wise n`. Atajos: `/` enfoca, `ayer`, `12/10`, `2.5k`. Si el concepto empieza con el nombre de un cliente, se le asigna solo.
-- **Mando**: cash disponible + runway, ingresos/gastos del mes vs anterior, objetivo del mes, **Skyline** (12 meses: ingresos oro, gastos carmesí rayado, neto en marfil; clic en un mes lo abre), cascada del mes (ingresos → fijos → variables → ahorro → neto), cuentas, por cobrar, próximos cargos, top categorías.
-- **Movimientos**: feed por día o tabla, filtros, buscador, export CSV. Clic en cualquiera para editar o borrar.
-- **Clientes & cobros**: contrato, plan de cuotas, cobrado vs pendiente. "Cobrar" crea el ingreso del negocio y marca la cuota pagada.
+- **Barra de mando**: mes y estado de la nube. Todo el CRM es del negocio (no hay ámbito personal).
+- (La barra de captura rápida se quitó a pedido de Santiago; los registros entran por los botones de Caja, Growth, Consultoría y Cuotas.)
+- **Mando**: Cash collected del mes (el número grande), Revenue (cerrado en el mes), Gastos y Profit, objetivo del mes, cash disponible + runway, **Skyline** (12 meses: ingresos oro, gastos carmesí rayado, neto en marfil; clic en un mes lo abre), cascada del mes (ingresos → fijos → variables → ahorro → neto), cuentas, por cobrar, próximos cargos, top categorías.
+- **Caja**: el libro de cada dólar que entró o salió de las cuentas. Feed por día o tabla, filtros, buscador, CSV, botones de cash collected / ingreso / gasto / transferencia.
+- **Growth**: clientes growth partner y closing con tu % del cash collected. Cada tarjeta tiene el botón **Vincular CRM** (URL + anon key del Supabase del CRM que le hicimos, tabla `pagos`, columna `usd`, con "Probar conexión"): Primal lee sus pagos en vivo, calcula tu parte y se actualiza sola cuando el cliente registra un pago (realtime). También admite cash collected manual. Por cliente: bruto → tu parte devengada → cobrado → pendiente, y "Cobrar saldo" crea el ingreso.
+- **Consultoría**: formato tabla, 100% tuyo. Nombre, teléfono (abre WhatsApp), email, contrato, cash collected, tipo de cuota, próxima cuota, medio de pago, comprobante y estado.
+- **Cuotas**: todas las cuotas de todos los clientes (pendientes / pagadas / vencidas), con botón cobrar, medio de pago y comprobante (link o archivo hasta 1 MB).
+- **Toda la empresa** (al final de Mando): cash collected de clientes, ingresos devengados por fuente (growth + closing + consultoría + otros), cobrado real, gastos del negocio, margen, ranking por cliente y tabla mes a mes.
 - **Recurrentes**: cargos fijos (alquiler, herramientas, salarios…). "Registrar" crea el gasto del mes con un clic.
 - **Config**: wordmark, objetivos mensuales, tipo de cambio CRC, cuentas, categorías, export/import JSON, datos de ejemplo, reset.
 

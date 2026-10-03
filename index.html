@@ -21,11 +21,7 @@
       <div class="word"><b id="brand-name">PRIMAL</b><span id="brand-sub">Centro de mando</span></div>
     </div>
 
-    <div class="seg red" id="scope-seg" role="tablist" aria-label="Ámbito">
-      <button data-scope="todo" class="active">Todo</button>
-      <button data-scope="personal">Personal</button>
-      <button data-scope="negocio">Negocio</button>
-    </div>
+    <div class="seg red hidden" id="scope-seg" role="tablist" aria-label="Ámbito"><button data-scope="negocio" class="active">Negocio</button></div>
 
     <div class="monthnav">
       <button id="m-prev" title="Mes anterior">‹</button>
@@ -39,35 +35,20 @@
 
   <nav class="views" id="views">
     <button data-view="mando" class="active">Mando</button>
-    <button data-view="movs">Movimientos <span class="n" id="n-movs"></span></button>
-    <button data-view="clientes">Clientes &amp; cobros <span class="n" id="n-cobros"></span></button>
+    <button data-view="movs">Caja <span class="n" id="n-movs"></span></button>
+    <button data-view="growth">Growth <span class="n" id="n-cobros"></span></button>
+    <button data-view="consultoria">Consultoría</button>
+    <button data-view="cuotas">Cuotas <span class="n" id="n-cuotas"></span></button>
     <button data-view="recurrentes">Recurrentes</button>
     <button data-view="config">Config</button>
   </nav>
 
-  <!-- ===== CAPTURA RÁPIDA ===== -->
-  <section class="capture" id="capture">
-    <div class="box">
-      <span class="prompt">›</span>
-      <input id="cap" type="text" autocomplete="off" spellcheck="false"
-        placeholder="-45 uber #transporte @bofa p   ·   +2500 NYLO cuota 1/3 #ventas @wise n" />
-      <button class="btn-form" id="cap-form" title="Abrir formulario completo">Formulario</button>
-    </div>
-    <div class="hint">
-      <span><b>+</b> ingreso · <b>-</b> gasto</span>
-      <span><b>#</b>categoría</span>
-      <span><b>@</b>cuenta</span>
-      <span><b>p</b> personal · <b>n</b> negocio</span>
-      <span><b>ayer</b> · <b>12/10</b> fecha</span>
-      <span><b>/</b> para enfocar · <b>Enter</b> guarda</span>
-    </div>
-    <div class="preview hidden" id="cap-preview"></div>
-  </section>
-
   <!-- ===== VISTAS ===== -->
   <main id="view-mando" class="view"></main>
   <main id="view-movs" class="view hidden"></main>
-  <main id="view-clientes" class="view hidden"></main>
+  <main id="view-growth" class="view hidden"></main>
+  <main id="view-consultoria" class="view hidden"></main>
+  <main id="view-cuotas" class="view hidden"></main>
   <main id="view-recurrentes" class="view hidden"></main>
   <main id="view-config" class="view hidden"></main>
 </div>

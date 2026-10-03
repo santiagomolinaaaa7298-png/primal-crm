@@ -320,3 +320,5 @@ table.tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}
   .status{display:none}
   .hero-num .big{font-size:52px}
 }
+.tbl tr.cur td{background:rgba(212,175,90,.05)}
+.tbl td a{color:var(--gold)}
