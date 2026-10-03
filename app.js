@@ -24,7 +24,7 @@ const TZ = "America/Costa_Rica";
    ============================================================ */
 let MOVS = [];                 // [{id,fecha,ambito,tipo,monto,moneda,cuenta,cuenta_destino,categoria,concepto,cliente,notas,demo}]
 let STATE = defaultState();    // {config,cuentas,clientes,recurrentes}
-let SCOPE = "todo";            // todo | personal | negocio
+let SCOPE = "negocio";         // todo el CRM es del negocio
 let MONTH = ymOf(todayStr());  // "YYYY-MM"
 let VIEW = "mando";
 let MOV_FILTERS = { tipo:"", categoria:"", cuenta:"", q:"", vista:"feed", rango:"mes" };
@@ -91,10 +91,10 @@ function fmtK(n){ const a=Math.abs(n); if(a>=1e6) return (n/1e6).toFixed(1).repl
 function toUSD(m){ const v=Number(m.monto)||0; if((m.moneda||"USD")==="CRC") return v/(Number(STATE.config.tcCRC)||510); return v; }
 function amb(a){ return a==="negocio" ? "n" : "p"; }
 function ambLabel(a){ return a==="negocio" ? "Negocio" : "Personal"; }
-function inScope(m){ return SCOPE==="todo" || m.ambito===SCOPE; }
+function inScope(m){ return true; }
 function isFija(cat){ return FIJAS.includes(cat); }
 function isAhorro(cat){ return AHORRO.includes(cat); }
-function cuentasScope(){ return STATE.cuentas.filter(c => SCOPE==="todo" || c.ambito==="ambas" || c.ambito===SCOPE); }
+function cuentasScope(){ return STATE.cuentas; }
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("show"),2600); }
 
 /* ============================================================
@@ -148,7 +148,7 @@ function setDb(on){
 /* ============================================================
    CÁLCULOS
    ============================================================ */
-function movsMes(ym, scope=SCOPE){ return MOVS.filter(m => ymOf(m.fecha)===ym && (scope==="todo"||m.ambito===scope)); }
+function movsMes(ym, scope=SCOPE){ return MOVS.filter(m => ymOf(m.fecha)===ym); }
 function totales(ym, scope=SCOPE){
   const t={ingreso:0,gasto:0,fijos:0,variables:0,ahorro:0,neto:0,n:0};
   movsMes(ym,scope).forEach(m=>{
@@ -214,7 +214,7 @@ function render(){
   $("#n-cobros").textContent = STATE.clientes.filter(c=>c.tipo!=="consultoria" && clientePendiente(c)>0.5).length || "";
   $("#capture").classList.toggle("hidden", VIEW==="config");
   $("#n-cuotas").textContent = cuotasPendientes().filter(x=>x.q.fecha && x.q.fecha<=todayStr()).length || "";
-  ({mando:renderMando, movs:renderMovs, growth:renderGrowth, consultoria:renderConsultoria, cuotas:renderCuotas, total:renderTotal, recurrentes:renderRecurrentes, config:renderConfig})[VIEW]();
+  ({mando:renderMando, movs:renderMovs, growth:renderGrowth, consultoria:renderConsultoria, cuotas:renderCuotas, recurrentes:renderRecurrentes, config:renderConfig})[VIEW]();
 }
 
 /* ============================================================
@@ -223,16 +223,16 @@ function render(){
 function renderMando(){
   const el=$("#view-mando"); const t=totales(MONTH); const prev=totales(addMonths(MONTH,-1));
   const cash=cashScope(); const burn=burnPromedio(); const runway = burn>0 ? cash/burn : null;
-  const objetivo = SCOPE==="personal" ? Number(STATE.config.objetivoPersonal)||0 : SCOPE==="negocio" ? Number(STATE.config.objetivoNegocio)||0 : (Number(STATE.config.objetivoPersonal)||0)+(Number(STATE.config.objetivoNegocio)||0);
+  const objetivo = Number(STATE.config.objetivoNegocio)||0;
   const pct = objetivo>0 ? Math.min(100, t.ingreso/objetivo*100) : 0;
   const deltaIng = prev.ingreso>0 ? ((t.ingreso-prev.ingreso)/prev.ingreso*100) : null;
   const hasData = MOVS.length>0 || STATE.cuentas.length>0;
-  const scopeTxt = SCOPE==="todo" ? "personal + negocio" : SCOPE;
+  const scopeTxt = "negocio";
 
   el.innerHTML = `
   <section class="hero">
     <div class="hero-num">
-      <div class="eyebrow">Cash disponible · ${esc(scopeTxt)}</div>
+      <div class="eyebrow">Cash disponible</div>
       <div class="big ${cash<0?'bad':''}">${fmt(cash)}</div>
       <div class="delta">${runway==null ? "sin gastos registrados todavía" : runway>=24 ? "runway <b class='ok'>+24 meses</b>" : `runway <b class="${runway<2?'bad':runway<4?'warn':'ok'}">${runway.toFixed(1)} meses</b> al ritmo actual`}</div>
       <div class="subkpis">
@@ -282,7 +282,8 @@ function renderMando(){
       <h3>Dónde se fue <span class="sub">top categorías</span></h3>
       ${renderTopCats()}
     </div>
-  </section>`;
+  </section>
+  ${renderTotalSections()}`;
   drawSkyline();
 }
 
@@ -306,7 +307,7 @@ function renderWallets(){
   const cs=cuentasScope();
   if(!cs.length) return `<div class="empty" style="padding:18px">Sin cuentas en este ámbito.<br><span class="dim">Banco, efectivo, Wise, USDT… cada una con su saldo inicial.</span></div>`;
   return `<div class="wallets">${cs.map(c=>{ const s=saldoCuenta(c); return `<div class="wallet" onclick="openCuenta('${c.id}')">
-    <div class="n"><span>${esc(c.nombre)}</span><em>${esc(amb(c.ambito==="ambas"?"":c.ambito)==="n"?"N":c.ambito==="ambas"?"P+N":"P")}</em></div>
+    <div class="n"><span>${esc(c.nombre)}</span><em>${esc(c.moneda||"USD")}</em></div>
     <div class="v ${s<0?'neg':''}">${fmt(s)}</div>
     <div class="t">${esc(c.tipo||"")}${c.moneda&&c.moneda!=="USD"?" · "+esc(c.moneda):""}</div></div>`; }).join("")}</div>`;
 }
@@ -411,6 +412,7 @@ function renderMovs(){
   const ctas=[...new Set([...STATE.cuentas.map(c=>c.nombre),...MOVS.map(m=>m.cuenta)].filter(Boolean))];
   const sumI=list.filter(m=>m.tipo==="ingreso").reduce((a,m)=>a+toUSD(m),0), sumG=list.filter(m=>m.tipo==="gasto").reduce((a,m)=>a+toUSD(m),0);
   el.innerHTML=`
+  <div class="mini" style="margin-top:16px;letter-spacing:.08em;text-transform:none;font-size:12px;color:var(--muted)">Caja es el libro de cada dólar que entró o salió de tus cuentas. Growth, Consultoría y Cuotas registran los cobros; acá los ves junto con los gastos, y de acá salen el cash disponible y el runway.</div>
   <div class="filters">
     <select id="f-rango"><option value="mes" ${f.rango==="mes"?"selected":""}>${monthLabel(MONTH)}</option><option value="todo" ${f.rango==="todo"?"selected":""}>Todo el historial</option></select>
     <select id="f-tipo"><option value="">Tipo: todos</option>${["ingreso","gasto","transfer"].map(t=>`<option value="${t}" ${f.tipo===t?"selected":""}>${t}</option>`).join("")}</select>
@@ -437,7 +439,7 @@ function renderMovs(){
   $$("[data-vista]",el).forEach(b=>b.onclick=()=>{f.vista=b.dataset.vista;render();});
 }
 function movTags(m){
-  const t=[`<span class="tag ${amb(m.ambito)}">${ambLabel(m.ambito)}</span>`];
+  const t=[];
   if(m.categoria) t.push(`<span class="tag">${esc(m.categoria)}</span>`);
   if(m.cuenta) t.push(`<span class="tag">@${esc(m.cuenta)}${m.tipo==="transfer"&&m.cuenta_destino?" → @"+esc(m.cuenta_destino):""}</span>`);
   if(m.cliente) t.push(`<span class="tag ember">${esc(m.cliente)}</span>`);
@@ -454,8 +456,8 @@ function renderFeed(list){
   }).join("")}</div>`;
 }
 function renderTabla(list){
-  return `<table class="tbl"><thead><tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th>Categoría</th><th>Cuenta</th><th>Ámbito</th><th>Cliente</th><th class="num">USD</th></tr></thead><tbody>
-  ${list.map(m=>`<tr onclick="openMov('${m.id}')"><td class="mono">${esc(m.fecha)}</td><td>${esc(m.tipo)}</td><td>${esc(m.concepto)}</td><td>${esc(m.categoria)}</td><td>${esc(m.cuenta)}${m.cuenta_destino?" → "+esc(m.cuenta_destino):""}</td><td>${ambLabel(m.ambito)}</td><td>${esc(m.cliente)}</td><td class="num ${m.tipo==="gasto"?"bad":""}">${m.tipo==="gasto"?"−":""}${fmt(toUSD(m))}</td></tr>`).join("")}
+  return `<table class="tbl"><thead><tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th>Categoría</th><th>Cuenta</th><th>Cliente</th><th class="num">USD</th></tr></thead><tbody>
+  ${list.map(m=>`<tr onclick="openMov('${m.id}')"><td class="mono">${esc(m.fecha)}</td><td>${esc(m.tipo)}</td><td>${esc(m.concepto)}</td><td>${esc(m.categoria)}</td><td>${esc(m.cuenta)}${m.cuenta_destino?" → "+esc(m.cuenta_destino):""}</td><td>${esc(m.cliente)}</td><td class="num ${m.tipo==="gasto"?"bad":""}">${m.tipo==="gasto"?"−":""}${fmt(toUSD(m))}</td></tr>`).join("")}
   </tbody></table>`;
 }
 function exportCSV(){
@@ -529,10 +531,7 @@ function openCliente(id, tipoPreset){
       <div class="f"><label>Estado</label><select id="c-estado">${["activo","pausa","cerrado"].map(s=>`<option ${c.estado===s?"selected":""}>${s}</option>`).join("")}</select></div>
       <div class="f"><label>Cobra en</label><select id="c-cuenta"><option value="">— cuenta —</option>${STATE.cuentas.map(k=>`<option ${c.cuenta===k.nombre?"selected":""}>${esc(k.nombre)}</option>`).join("")}</select></div></div>
     <div class="f3"><div class="f"><label>Contrato total (USD)</label><input id="c-total" class="mono" type="number" step="0.01" value="${c.total||""}" /></div><div class="f"><label>Tipo de cuota</label><select id="c-tcuota">${["Pago único","Mensual","Quincenal","Semanal","50/50","3 cuotas","Otro"].map(t=>`<option ${(c.tipoCuota||"Pago único")===t?"selected":""}>${t}</option>`).join("")}</select></div><div class="f"><label>Medio de pago habitual</label><select id="c-medio">${MEDIOS.map(t=>`<option ${(c.medio||"")===t?"selected":""}>${t}</option>`).join("")}</select></div></div>
-    <div class="f" id="c-link-wrap"><label>CRM del cliente vinculado <span class="sub" style="text-transform:none;letter-spacing:0;color:var(--dim)">· Supabase del CRM que le hicimos: lee su tabla de pagos y calcula tu % solo</span></label>
-      <div class="f2"><div class="f"><input id="c-link-url" value="${esc((c.link||{}).url||"")}" placeholder="https://xxxx.supabase.co" /></div><div class="f"><input id="c-link-key" class="mono" value="${esc((c.link||{}).key||"")}" placeholder="anon / publishable key" /></div></div>
-      <div class="f3" style="margin-top:8px"><div class="f"><label>Tabla</label><input id="c-link-tabla" class="mono" value="${esc((c.link||{}).tabla||"pagos")}" /></div><div class="f"><label>Columna monto</label><input id="c-link-monto" class="mono" value="${esc((c.link||{}).campoMonto||"usd")}" /></div><div class="f"><label>Desde (fecha)</label><input id="c-link-desde" type="date" value="${esc((c.link||{}).desde||"")}" /></div></div>
-      <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><button type="button" class="btn xs" id="c-link-test">Probar conexión</button><span class="mini" id="c-link-res">${EXT[c.id]&&EXT[c.id].rows?`${EXT[c.id].rows.length} pagos · ${fmt(extSum(c))}`:""}</span></div></div>
+    <div class="f" id="c-link-wrap"><label>CRM del cliente</label><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${extBadge(c)}<button type="button" class="btn xs" onclick="closeModal();openLink('${c.id}')">${c.link&&c.link.url?"Editar vínculo":"Vincular CRM"}</button></div></div>
     <div class="f"><label>Plan de cuotas (opcional) <button class="btn xs ghost" type="button" id="c-add" style="margin-left:8px">+ cuota</button> <button class="btn xs ghost" type="button" id="c-split" style="margin-left:4px">dividir total en N</button></label>
       <div class="cuota-list" id="c-cuotas"></div></div>
     <div class="f"><label>Notas</label><textarea id="c-notas">${esc(c.notas)}</textarea></div>`;
@@ -540,8 +539,7 @@ function openCliente(id, tipoPreset){
     onOpen(){
       const tipoUI=v=>{ $("#c-pct-wrap").classList.toggle("hidden", v==="consultoria"); $("#c-link-wrap").classList.toggle("hidden", v==="consultoria"); if(v==="consultoria") $("#c-pct").value=100; };
       pickInit("#c-tipo", tipoUI); tipoUI(c.tipo||"growth");
-      $("#c-link-test").onclick=async()=>{ const r=$("#c-link-res"); r.textContent="probando…"; const link={url:$("#c-link-url").value.trim(), key:$("#c-link-key").value.trim(), tabla:$("#c-link-tabla").value.trim()||"pagos", campoMonto:$("#c-link-monto").value.trim()||"usd", campoFecha:"fecha", desde:$("#c-link-desde").value};
-        const res=await fetchExt(link); r.textContent = res.error ? "✕ "+res.error : `✓ ${res.rows.length} pagos · ${fmt(res.rows.reduce((a,x)=>a+x.monto,0))}`; };
+
       const list=$("#c-cuotas");
       const draw=()=>{ list.innerHTML = cuotas.length ? cuotas.map((q,i)=>`<div class="cuota"><input data-i="${i}" data-k="label" value="${esc(q.label)}" placeholder="Cuota ${i+1}" /><input data-i="${i}" data-k="monto" type="number" step="0.01" value="${q.monto||""}" placeholder="USD" /><input data-i="${i}" data-k="fecha" type="date" value="${esc(q.fecha||"")}" /><button type="button" class="chk ${q.pagada?"on":""}" data-i="${i}" title="pagada">✓</button><button type="button" class="del" data-i="${i}">×</button></div>`).join("") : `<div class="mini">Sin cuotas. Agregá una o dividí el total.</div>`;
         if(!cuotas.length) { /* nada */ }
@@ -557,8 +555,8 @@ function openCliente(id, tipoPreset){
       c.nombre=$("#c-nombre").value.trim(); if(!c.nombre){toast("Falta el nombre");return false;}
       c.servicio=$("#c-serv").value.trim(); c.tipo=pickVal("#c-tipo")||"growth"; c.pct=c.tipo==="consultoria"?100:(Number($("#c-pct").value)||0); c.total=Number($("#c-total").value)||0; c.estado=$("#c-estado").value; c.cuenta=$("#c-cuenta").value; c.notas=$("#c-notas").value; c.cuotas=cuotas;
       c.telefono=$("#c-tel").value.trim(); c.email=$("#c-email").value.trim(); c.tipoCuota=$("#c-tcuota").value; c.medio=$("#c-medio").value;
-      const lu=$("#c-link-url").value.trim(); c.link = (c.tipo!=="consultoria" && lu) ? {url:lu, key:$("#c-link-key").value.trim(), tabla:$("#c-link-tabla").value.trim()||"pagos", campoMonto:$("#c-link-monto").value.trim()||"usd", campoFecha:"fecha", desde:$("#c-link-desde").value} : null;
-      if(!id) STATE.clientes.push(c); await saveState("clientes"); toast("Cliente guardado"); render(); if(c.link) syncExt(c);
+      if(c.tipo==="consultoria") c.link=null;
+      if(!id) STATE.clientes.push(c); await saveState("clientes"); toast("Cliente guardado"); render();
     },
     async onDelete(){ if(!confirm(`¿Borrar a ${c.nombre}? Los ingresos ya registrados quedan.`)) return false; STATE.clientes=STATE.clientes.filter(x=>x.id!==id); STATE.cobros=(STATE.cobros||[]).filter(x=>x.clienteId!==id); await saveState("clientes"); await saveState("cobros"); render(); }
   });
@@ -577,27 +575,25 @@ function renderRecurrentes(){
   const regs=act.filter(r=>recurrenteRegistrado(r)).length;
   el.innerHTML=`
   <div class="burn" style="margin-top:18px">
-    <div class="subkpi"><div class="l">Fijos personal / mes</div><div class="v">${fmt(fp)}</div></div>
-    <div class="subkpi"><div class="l">Fijos negocio / mes</div><div class="v">${fmt(fn)}</div></div>
-    <div class="subkpi"><div class="l">Quema fija total</div><div class="v bad">${fmt(fp+fn)}</div><div class="s">${fmt((fp+fn)*12)} al año</div></div>
+    <div class="subkpi"><div class="l">Quema fija / mes</div><div class="v bad">${fmt(fp+fn)}</div><div class="s">${fmt((fp+fn)*12)} al año · ${act.length} cargos</div></div>
     <div class="subkpi"><div class="l">${monthLabel(MONTH)}</div><div class="v">${regs}/${act.length}</div><div class="s">registrados este mes</div></div>
     <div class="subkpi" style="display:flex;align-items:center;justify-content:center"><button class="btn gold" onclick="openRecurrente()">+ Recurrente</button></div>
   </div>
   <section class="panel"><h3>Cargos fijos <span class="sub">clic en "registrar" crea el gasto del mes · clic en el nombre edita</span></h3>
   ${!rs.length?`<div class="empty"><div class="g">SIN RECURRENTES</div>Alquiler, suscripciones, herramientas, salarios… lo que se cobra solo cada mes.</div>`:`<div class="list">${rs.map(r=>{ const reg=recurrenteRegistrado(r); return `<div class="row" style="grid-template-columns:1fr auto auto;gap:14px">
-    <div class="a" style="cursor:pointer" onclick="openRecurrente('${r.id}')"><b>${esc(r.nombre)} ${r.activo===false?'<span class="tag">pausado</span>':""}</b><small>día ${esc(r.dia||"—")} · ${esc(r.categoria||"")} · @${esc(r.cuenta||"—")} · <span class="tag ${amb(r.ambito)}">${ambLabel(r.ambito)}</span></small></div>
+    <div class="a" style="cursor:pointer" onclick="openRecurrente('${r.id}')"><b>${esc(r.nombre)} ${r.activo===false?'<span class="tag">pausado</span>':""}</b><small>día ${esc(r.dia||"—")} · ${esc(r.categoria||"")} · @${esc(r.cuenta||"—")}</small></div>
     <div class="b" style="color:var(--red-2)">−${fmt(r.monto)}</div>
     <div>${reg?`<span class="tag ok">✓ registrado</span>`:`<button class="btn xs" onclick="registrarRecurrente('${r.id}')">registrar</button>`}</div></div>`; }).join("")}</div>`}
   </section>`;
 }
 function openRecurrente(id){
-  const r = id ? STATE.recurrentes.find(x=>x.id===id) : {id:uid(), nombre:"", monto:0, dia:1, cuenta:"", ambito:SCOPE==="negocio"?"negocio":"personal", categoria:"Suscripciones", activo:true};
+  const r = id ? STATE.recurrentes.find(x=>x.id===id) : {id:uid(), nombre:"", monto:0, dia:1, cuenta:"", ambito:"negocio", categoria:"Herramientas", activo:true};
   openModal({ title: id?`<i>›</i> ${esc(r.nombre)}`:"Nuevo <i>recurrente</i>", del:!!id, body:`
     <div class="f2"><div class="f"><label>Nombre</label><input id="r-nombre" value="${esc(r.nombre)}" placeholder="Ej: Alquiler, ChatGPT, GHL" /></div><div class="f"><label>Monto (USD)</label><input id="r-monto" class="mono" type="number" step="0.01" value="${r.monto||""}" /></div></div>
     <div class="f3"><div class="f"><label>Día del mes</label><input id="r-dia" type="number" min="1" max="31" value="${r.dia||1}" /></div>
       <div class="f"><label>Cuenta</label><select id="r-cuenta"><option value="">—</option>${STATE.cuentas.map(k=>`<option ${r.cuenta===k.nombre?"selected":""}>${esc(k.nombre)}</option>`).join("")}</select></div>
       <div class="f"><label>Categoría</label><select id="r-cat">${STATE.config.categorias.gasto.map(c=>`<option ${r.categoria===c?"selected":""}>${esc(c)}</option>`).join("")}</select></div></div>
-    <div class="f"><label>Ámbito</label><div class="pick" id="r-amb"><button type="button" data-v="personal" class="${r.ambito==="personal"?"on":""}">Personal</button><button type="button" data-v="negocio" class="${r.ambito==="negocio"?"on red":""}">Negocio</button></div></div>
+    <div class="f hidden"><label>Ámbito</label><div class="pick" id="r-amb"><button type="button" data-v="negocio" class="on red">Negocio</button></div></div>
     <div class="f"><label>Activo</label><div class="pick" id="r-act"><button type="button" data-v="1" class="${r.activo!==false?"on":""}">Sí</button><button type="button" data-v="0" class="${r.activo===false?"on":""}">Pausado</button></div></div>`,
     onOpen(){ pickInit("#r-amb"); pickInit("#r-act"); },
     async onSave(){ r.nombre=$("#r-nombre").value.trim(); if(!r.nombre){toast("Falta el nombre");return false;} r.monto=Number($("#r-monto").value)||0; r.dia=Number($("#r-dia").value)||1; r.cuenta=$("#r-cuenta").value; r.categoria=$("#r-cat").value; r.ambito=pickVal("#r-amb"); r.activo=pickVal("#r-act")==="1"; if(!id) STATE.recurrentes.push(r); await saveState("recurrentes"); toast("Guardado"); render(); },
@@ -623,14 +619,13 @@ function renderConfig(){
       <div class="kv">
         <div class="f"><label>Wordmark</label><input id="cfg-marca" value="${esc(c.marca)}" /></div>
         <div class="f"><label>Subtítulo</label><input id="cfg-sub" value="${esc(c.sub)}" /></div>
-        <div class="f"><label>Objetivo personal / mes (USD)</label><input id="cfg-op" class="mono" type="number" value="${c.objetivoPersonal||0}" /></div>
-        <div class="f"><label>Objetivo negocio / mes (USD)</label><input id="cfg-on" class="mono" type="number" value="${c.objetivoNegocio||0}" /></div>
+        <div class="f"><label>Objetivo del mes (USD)</label><input id="cfg-on" class="mono" type="number" value="${c.objetivoNegocio||0}" /></div><input id="cfg-op" type="hidden" value="${c.objetivoPersonal||0}" />
         <div class="f"><label>Tipo de cambio CRC → USD</label><input id="cfg-tc" class="mono" type="number" value="${c.tcCRC||510}" /></div>
       </div>
       <div style="margin-top:12px"><button class="btn gold" onclick="saveConfigForm()">Guardar</button></div>
     </div>
     <div class="panel"><h3>Cuentas <span class="act"><button class="btn xs ghost" onclick="openCuenta()">+ Cuenta</button></span></h3>
-      ${!STATE.cuentas.length?`<div class="mini">Sin cuentas. Creá al menos una (ej: BAC, Wise, Efectivo, USDT).</div>`:`<div class="list">${STATE.cuentas.map(k=>`<div class="row click" onclick="openCuenta('${k.id}')"><div class="a"><b>${esc(k.nombre)}</b><small>${esc(k.tipo||"")} · ${esc(k.moneda||"USD")} · ${k.ambito==="ambas"?"personal + negocio":esc(k.ambito)}</small></div><div class="b">${fmt(saldoCuenta(k))}<small>inicial ${fmt(k.inicial)}</small></div></div>`).join("")}</div>`}
+      ${!STATE.cuentas.length?`<div class="mini">Sin cuentas. Creá al menos una (ej: BAC, Wise, Efectivo, USDT).</div>`:`<div class="list">${STATE.cuentas.map(k=>`<div class="row click" onclick="openCuenta('${k.id}')"><div class="a"><b>${esc(k.nombre)}</b><small>${esc(k.tipo||"")} · ${esc(k.moneda||"USD")}</small></div><div class="b">${fmt(saldoCuenta(k))}<small>inicial ${fmt(k.inicial)}</small></div></div>`).join("")}</div>`}
     </div>
   </section>
   <section class="grid g-2">
@@ -657,11 +652,11 @@ async function saveConfigForm(){ const c=STATE.config; c.marca=$("#cfg-marca").v
 async function addCat(t){ const i=$(t==="ingreso"?"#new-ing":"#new-gas"); const v=i.value.trim(); if(!v) return; if(!STATE.config.categorias[t].includes(v)) STATE.config.categorias[t].push(v); await saveState("config"); render(); }
 async function delCat(t,v){ STATE.config.categorias[t]=STATE.config.categorias[t].filter(x=>x!==v); await saveState("config"); render(); }
 function openCuenta(id){
-  const k = id ? STATE.cuentas.find(x=>x.id===id) : {id:uid(), nombre:"", tipo:"Banco", moneda:"USD", inicial:0, ambito:SCOPE==="negocio"?"negocio":SCOPE==="personal"?"personal":"ambas"};
+  const k = id ? STATE.cuentas.find(x=>x.id===id) : {id:uid(), nombre:"", tipo:"Banco", moneda:"USD", inicial:0, ambito:"negocio"};
   openModal({ title:id?`<i>›</i> ${esc(k.nombre)}`:"Nueva <i>cuenta</i>", del:!!id, body:`
     <div class="f2"><div class="f"><label>Nombre</label><input id="k-nombre" value="${esc(k.nombre)}" placeholder="Ej: BAC, Wise, Efectivo, USDT" /></div><div class="f"><label>Tipo</label><select id="k-tipo">${["Banco","Efectivo","Wise / Payoneer","Cripto","Tarjeta de crédito","Otro"].map(t=>`<option ${k.tipo===t?"selected":""}>${t}</option>`).join("")}</select></div></div>
     <div class="f2"><div class="f"><label>Saldo inicial (USD)</label><input id="k-ini" class="mono" type="number" step="0.01" value="${k.inicial||0}" /><div class="mini">el saldo actual = inicial + movimientos</div></div><div class="f"><label>Moneda</label><select id="k-mon">${["USD","CRC","EUR","USDT"].map(m=>`<option ${k.moneda===m?"selected":""}>${m}</option>`).join("")}</select></div></div>
-    <div class="f"><label>Ámbito</label><div class="pick" id="k-amb"><button type="button" data-v="personal" class="${k.ambito==="personal"?"on":""}">Personal</button><button type="button" data-v="negocio" class="${k.ambito==="negocio"?"on red":""}">Negocio</button><button type="button" data-v="ambas" class="${k.ambito==="ambas"?"on ember":""}">Ambas</button></div></div>`,
+    <div class="f hidden"><label>Ámbito</label><div class="pick" id="k-amb"><button type="button" data-v="negocio" class="on red">Negocio</button></div></div>`,
     onOpen(){ pickInit("#k-amb"); },
     async onSave(){ const old=k.nombre; k.nombre=$("#k-nombre").value.trim(); if(!k.nombre){toast("Falta el nombre");return false;} k.tipo=$("#k-tipo").value; k.inicial=Number($("#k-ini").value)||0; k.moneda=$("#k-mon").value; k.ambito=pickVal("#k-amb");
       if(id && old && old!==k.nombre){ for(const m of MOVS){ const p={}; if(m.cuenta===old) p.cuenta=k.nombre; if(m.cuenta_destino===old) p.cuenta_destino=k.nombre; if(Object.keys(p).length) await updMov(m.id,p); } }
@@ -682,13 +677,13 @@ async function resetAll(){ if(!confirm("¿Borrar TODO (movimientos, cuentas, cli
    MOVIMIENTO · modal + captura rápida
    ============================================================ */
 function openMov(id, preset={}){
-  const m = id ? Object.assign({}, MOVS.find(x=>x.id===id)) : Object.assign({fecha:todayStr(), ambito:SCOPE==="negocio"?"negocio":"personal", tipo:"gasto", monto:"", moneda:STATE.config.moneda||"USD", cuenta:"", cuenta_destino:"", categoria:"", concepto:"", cliente:"", notas:""}, preset);
+  const m = id ? Object.assign({}, MOVS.find(x=>x.id===id)) : Object.assign({fecha:todayStr(), ambito:"negocio", tipo:"gasto", monto:"", moneda:STATE.config.moneda||"USD", cuenta:"", cuenta_destino:"", categoria:"", concepto:"", cliente:"", notas:""}, preset);
   const cats=()=> (m.tipo==="ingreso"?STATE.config.categorias.ingreso:STATE.config.categorias.gasto);
   const body=`
     <div class="f"><label>Tipo</label><div class="pick" id="m-tipo"><button type="button" data-v="gasto" class="${m.tipo==="gasto"?"on red":""}">− Gasto</button><button type="button" data-v="ingreso" class="${m.tipo==="ingreso"?"on":""}">+ Ingreso</button><button type="button" data-v="transfer" class="${m.tipo==="transfer"?"on ember":""}">⇄ Transferencia</button></div></div>
     <div class="f3"><div class="f"><label>Monto</label><input id="m-monto" class="mono" type="number" step="0.01" value="${m.monto}" autofocus /></div><div class="f"><label>Moneda</label><select id="m-mon">${["USD","CRC","EUR","USDT"].map(x=>`<option ${m.moneda===x?"selected":""}>${x}</option>`).join("")}</select></div><div class="f"><label>Fecha</label><input id="m-fecha" type="date" value="${esc(m.fecha)}" /></div></div>
     <div class="f"><label>Concepto</label><input id="m-conc" value="${esc(m.concepto)}" placeholder="¿Qué fue?" /></div>
-    <div class="f2"><div class="f"><label>Ámbito</label><div class="pick" id="m-amb"><button type="button" data-v="personal" class="${m.ambito==="personal"?"on":""}">Personal</button><button type="button" data-v="negocio" class="${m.ambito==="negocio"?"on red":""}">Negocio</button></div></div>
+    <div class="f2"><div class="f hidden"><label>Ámbito</label><div class="pick" id="m-amb"><button type="button" data-v="negocio" class="on red">Negocio</button></div></div>
       <div class="f" id="m-cat-wrap"><label>Categoría</label><select id="m-cat"><option value="">—</option>${cats().map(c=>`<option ${m.categoria===c?"selected":""}>${esc(c)}</option>`).join("")}</select></div></div>
     <div class="f2"><div class="f"><label id="m-cta-lbl">${m.tipo==="transfer"?"Desde":"Cuenta"}</label><select id="m-cta"><option value="">—</option>${STATE.cuentas.map(k=>`<option ${m.cuenta===k.nombre?"selected":""}>${esc(k.nombre)}</option>`).join("")}</select></div>
       <div class="f ${m.tipo==="transfer"?"":"hidden"}" id="m-dest-wrap"><label>Hacia</label><select id="m-dest"><option value="">—</option>${STATE.cuentas.map(k=>`<option ${m.cuenta_destino===k.nombre?"selected":""}>${esc(k.nombre)}</option>`).join("")}</select></div>
@@ -734,7 +729,7 @@ function parseCapture(s){
   });
   if(out.monto==null) return null;
   if(!out.tipo) out.tipo="gasto";
-  if(!out.ambito) out.ambito = SCOPE==="negocio"?"negocio":"personal";
+  out.ambito="negocio";
   // normalizar categoría y cuenta contra catálogos (case-insensitive, prefijo)
   const cats=out.tipo==="ingreso"?STATE.config.categorias.ingreso:STATE.config.categorias.gasto;
   if(out.categoria){ const c=cats.find(x=>x.toLowerCase()===out.categoria.toLowerCase())||cats.find(x=>x.toLowerCase().startsWith(out.categoria.toLowerCase())); out.categoria=c||out.categoria; }
@@ -748,7 +743,7 @@ function capturePreview(){
   const p=parseCapture($("#cap").value); const el=$("#cap-preview");
   if(!p){ el.classList.add("hidden"); return; }
   el.classList.remove("hidden");
-  el.innerHTML=`<span class="amt ${p.tipo==="gasto"?"bad":"ember"}">${p.tipo==="gasto"?"−":"+"}${fmt(p.monto)}</span><b>${esc(p.concepto||"(sin concepto)")}</b><span class="tag ${amb(p.ambito)}">${ambLabel(p.ambito)}</span>${p.categoria?`<span class="tag">#${esc(p.categoria)}</span>`:`<span class="tag warn">sin categoría</span>`}${p.cuenta?`<span class="tag">@${esc(p.cuenta)}</span>`:`<span class="tag warn">sin cuenta</span>`}${p.cliente?`<span class="tag ember">${esc(p.cliente)}</span>`:""}<span class="tag">${esc(p.fecha)}</span><kbd>Enter</kbd>`;
+  el.innerHTML=`<span class="amt ${p.tipo==="gasto"?"bad":"ember"}">${p.tipo==="gasto"?"−":"+"}${fmt(p.monto)}</span><b>${esc(p.concepto||"(sin concepto)")}</b>${p.categoria?`<span class="tag">#${esc(p.categoria)}</span>`:`<span class="tag warn">sin categoría</span>`}${p.cuenta?`<span class="tag">@${esc(p.cuenta)}</span>`:`<span class="tag warn">sin cuenta</span>`}${p.cliente?`<span class="tag ember">${esc(p.cliente)}</span>`:""}<span class="tag">${esc(p.fecha)}</span><kbd>Enter</kbd>`;
 }
 async function captureSubmit(){
   const p=parseCapture($("#cap").value); if(!p){ toast("Empezá con el monto: -45 uber #comida @bac"); return; }
@@ -779,7 +774,7 @@ function pickVal(sel){ const b=$(sel+" button.on"); return b?b.dataset.v:""; }
 async function loadDemo(){
   const hoy=todayStr(); const m0=ymOf(hoy);
   const D=(ym,d)=>`${ym}-${String(Math.min(d,daysInMonth(ym))).padStart(2,"0")}`;
-  STATE.cuentas=[{id:uid(),nombre:"BAC",tipo:"Banco",moneda:"USD",inicial:1800,ambito:"personal",demo:true},{id:uid(),nombre:"Wise",tipo:"Wise / Payoneer",moneda:"USD",inicial:4200,ambito:"negocio",demo:true},{id:uid(),nombre:"Efectivo",tipo:"Efectivo",moneda:"USD",inicial:900,ambito:"ambas",demo:true},{id:uid(),nombre:"USDT",tipo:"Cripto",moneda:"USDT",inicial:2500,ambito:"ambas",demo:true}];
+  STATE.cuentas=[{id:uid(),nombre:"BAC",tipo:"Banco",moneda:"USD",inicial:1800,ambito:"negocio",demo:true},{id:uid(),nombre:"Wise",tipo:"Wise / Payoneer",moneda:"USD",inicial:4200,ambito:"negocio",demo:true},{id:uid(),nombre:"Efectivo",tipo:"Efectivo",moneda:"USD",inicial:900,ambito:"negocio",demo:true},{id:uid(),nombre:"USDT",tipo:"Cripto",moneda:"USDT",inicial:2500,ambito:"negocio",demo:true}];
   STATE.clientes=[
     {id:"demo-a",nombre:"Cliente A",servicio:"Growth partner · webinar",tipo:"growth",pct:25,total:0,estado:"activo",cuenta:"Wise",notas:"",demo:true,cuotas:[]},
     {id:"demo-b",nombre:"Cliente B",servicio:"Closing · oferta high ticket",tipo:"closing",pct:10,total:0,estado:"activo",cuenta:"Wise",notas:"",demo:true,cuotas:[]},
@@ -787,7 +782,7 @@ async function loadDemo(){
     {id:"demo-d",nombre:"Cliente D",servicio:"Growth partner (cerrado)",tipo:"growth",pct:27.5,total:0,estado:"cerrado",cuenta:"Wise",notas:"",demo:true,cuotas:[]}
   ];
   STATE.cobros=[];
-  STATE.recurrentes=[{id:uid(),nombre:"Alquiler",monto:650,dia:1,cuenta:"BAC",ambito:"personal",categoria:"Vivienda",activo:true,demo:true},{id:uid(),nombre:"Gym",monto:45,dia:3,cuenta:"BAC",ambito:"personal",categoria:"Salud",activo:true,demo:true},{id:uid(),nombre:"Claude + ChatGPT",monto:40,dia:8,cuenta:"Wise",ambito:"negocio",categoria:"Herramientas",activo:true,demo:true},{id:uid(),nombre:"GoHighLevel",monto:97,dia:12,cuenta:"Wise",ambito:"negocio",categoria:"Herramientas",activo:true,demo:true},{id:uid(),nombre:"Editor (freelance)",monto:400,dia:15,cuenta:"USDT",ambito:"negocio",categoria:"Salarios",activo:true,demo:true}];
+  STATE.recurrentes=[{id:uid(),nombre:"Oficina / coworking",monto:650,dia:1,cuenta:"BAC",ambito:"negocio",categoria:"Servicios",activo:true,demo:true},{id:uid(),nombre:"Notion + Canva",monto:45,dia:3,cuenta:"BAC",ambito:"negocio",categoria:"Suscripciones",activo:true,demo:true},{id:uid(),nombre:"Claude + ChatGPT",monto:40,dia:8,cuenta:"Wise",ambito:"negocio",categoria:"Herramientas",activo:true,demo:true},{id:uid(),nombre:"GoHighLevel",monto:97,dia:12,cuenta:"Wise",ambito:"negocio",categoria:"Herramientas",activo:true,demo:true},{id:uid(),nombre:"Editor (freelance)",monto:400,dia:15,cuenta:"USDT",ambito:"negocio",categoria:"Salarios",activo:true,demo:true}];
   const movs=[]; const push=(ym,d,o)=>movs.push(Object.assign({id:uid(),fecha:D(ym,d),moneda:"USD",cuenta:"",cuenta_destino:"",categoria:"",concepto:"",cliente:"",notas:"",demo:true,created_at:new Date().toISOString()},o));
   // cash collected de clientes (bruto) → mi parte = bruto × %
   const cc={5:[["demo-d",11600,"Lanzamiento 1"]],4:[["demo-d",16400,"Lanzamiento 2"]],3:[["demo-d",15600,"Lanzamiento 3"]],2:[["demo-a",10000,"Webinar sept"]],1:[["demo-a",10000,"Webinar oct"],["demo-b",20000,"Cierres del mes"]],0:[["demo-a",7200,"Cierres semana 1",false]]};
@@ -798,18 +793,18 @@ async function loadDemo(){
     if(i%2===0) push(ym,1,{ambito:"negocio",tipo:"ingreso",monto:900+i*150,cuenta:"USDT",categoria:"Comisión",concepto:"Comisión referido"});
     if(i===1) push(ym,22,{ambito:"negocio",tipo:"ingreso",monto:1200,cuenta:"USDT",categoria:"Comisión",concepto:"Comisión afiliado"});
     if(i===1) push(ym,10,{ambito:"negocio",tipo:"ingreso",monto:1500,cuenta:"USDT",categoria:"Consultoría",concepto:"Cliente C · 50% inicio",cliente:"Cliente C"});
-    push(ym,1,{ambito:"personal",tipo:"gasto",monto:650,cuenta:"BAC",categoria:"Vivienda",concepto:"Alquiler"});
-    push(ym,3,{ambito:"personal",tipo:"gasto",monto:45,cuenta:"BAC",categoria:"Salud",concepto:"Gym"});
+    push(ym,1,{ambito:"negocio",tipo:"gasto",monto:650,cuenta:"BAC",categoria:"Servicios",concepto:"Oficina / coworking"});
+    push(ym,3,{ambito:"negocio",tipo:"gasto",monto:45,cuenta:"BAC",categoria:"Suscripciones",concepto:"Notion + Canva"});
     push(ym,8,{ambito:"negocio",tipo:"gasto",monto:40,cuenta:"Wise",categoria:"Herramientas",concepto:"Claude + ChatGPT"});
     push(ym,12,{ambito:"negocio",tipo:"gasto",monto:97,cuenta:"Wise",categoria:"Herramientas",concepto:"GoHighLevel"});
     push(ym,15,{ambito:"negocio",tipo:"gasto",monto:400,cuenta:"USDT",categoria:"Salarios",concepto:"Editor (freelance)"});
     push(ym,10,{ambito:"negocio",tipo:"gasto",monto:300+i*80,cuenta:"Wise",categoria:"Ads",concepto:"Meta Ads"});
-    push(ym,6,{ambito:"personal",tipo:"gasto",monto:220+i*15,cuenta:"BAC",categoria:"Comida",concepto:"Súper"});
-    push(ym,14,{ambito:"personal",tipo:"gasto",monto:80,cuenta:"Efectivo",categoria:"Transporte",concepto:"Uber"});
-    push(ym,22,{ambito:"personal",tipo:"gasto",monto:120+(i%3)*60,cuenta:"BAC",categoria:"Ocio",concepto:"Cena / salidas"});
-    if(i<4) push(ym,25,{ambito:"personal",tipo:"gasto",monto:500,cuenta:"USDT",categoria:"Inversión",concepto:"DCA BTC"});
-    if(i===3) push(ym,27,{ambito:"personal",tipo:"gasto",monto:1100,cuenta:"BAC",categoria:"Viajes",concepto:"Vuelo Dubái"});
-    push(ym,28,{ambito:"negocio",tipo:"transfer",monto:1500,cuenta:"Wise",cuenta_destino:"BAC",concepto:"Retiro personal"});
+    push(ym,6,{ambito:"negocio",tipo:"gasto",monto:220+i*15,cuenta:"BAC",categoria:"Educación",concepto:"Cursos / mentoría"});
+    push(ym,14,{ambito:"negocio",tipo:"gasto",monto:80,cuenta:"Efectivo",categoria:"Transporte",concepto:"Uber reuniones"});
+    push(ym,22,{ambito:"negocio",tipo:"gasto",monto:120+(i%3)*60,cuenta:"BAC",categoria:"Viajes",concepto:"Cenas con clientes"});
+    if(i<4) push(ym,25,{ambito:"negocio",tipo:"gasto",monto:500,cuenta:"USDT",categoria:"Inversión",concepto:"Reserva / inversión"});
+    if(i===3) push(ym,27,{ambito:"negocio",tipo:"gasto",monto:1100,cuenta:"BAC",categoria:"Viajes",concepto:"Vuelo Dubái · evento"});
+    push(ym,28,{ambito:"negocio",tipo:"transfer",monto:1500,cuenta:"Wise",cuenta_destino:"BAC",concepto:"Retiro de socio"});
   }
   movs.forEach(m=>{ if(m.fecha>hoy) m.fecha=hoy; });
   MOVS=movs.concat(MOVS);
@@ -895,7 +890,8 @@ function clientCard(c){
     <div class="top"><div><div class="nm">${esc(c.nombre)}</div><div class="sv">${esc(c.servicio||TIPOS_CLIENTE[c.tipo]||"")}</div></div><span class="tag ${c.estado==="activo"?"ember":c.estado==="cerrado"?"":"warn"}">${pctCliente(c)}%${c.estado!=="activo"?" · "+esc(c.estado):""}</span></div>
     <div class="nums"><div><div class="l">Cash collected</div><div class="v">${fmt(b)}</div></div><div><div class="l">Mi parte</div><div class="v ember">${fmt(d)}</div></div><div><div class="l">${pz>0.5?"Pendiente":"Cobrado"}</div><div class="v ${pz>0.5?"bad":"dim"}">${fmt(pz>0.5?pz:k)}</div></div></div>
     <div class="prog"><i class="${pct>=99.5?"full":""}" style="width:${pct}%"></i></div>
-    <div class="next"><span>${c.tipo==="consultoria"?"":extBadge(c)} ${monthLabel(MONTH).split(" ")[0]}: <b>${fmt(mes)}</b></span><b>${pct.toFixed(0)}% cobrado</b></div></div>`;
+    <div class="next"><span>${monthLabel(MONTH).split(" ")[0]}: <b>${fmt(mes)}</b></span><b>${pct.toFixed(0)}% cobrado</b></div>
+    <div style="display:flex;gap:6px;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap">${extBadge(c)}<button class="btn xs ${c.link&&c.link.url?"ghost":"gold"}" onclick="event.stopPropagation();openLink('${c.id}')">${c.link&&c.link.url?"Editar vínculo":"Vincular CRM"}</button></div></div>`;
 }
 function renderGrowth(){
   const el=$("#view-growth"); const cls=STATE.clientes.filter(c=>c.tipo!=="consultoria");
@@ -911,6 +907,7 @@ function renderGrowth(){
     <div class="subkpi"><div class="l">Por cobrar</div><div class="v ${pend>0.5?"bad":""}">${fmt(pend)}</div><div class="s">saldo a tu favor</div></div>
     <div class="subkpi" style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap"><button class="btn gold sm" onclick="openCobro()">+ Cash collected</button><button class="btn sm" onclick="openCliente()">+ Cliente</button><button class="btn sm ghost" onclick="syncAllExt();toast('Sincronizando CRMs…')">↻ Sync</button></div>
   </div>
+  <div class="mini" style="margin:-6px 0 10px;letter-spacing:.08em;text-transform:none;font-size:12px;color:var(--muted)">Cada cliente tiene un botón <b>Vincular CRM</b>: pegás la URL y la anon key del Supabase del CRM que le hicimos y su cash collected entra acá solo, con tu % calculado. Mientras no esté vinculado, cargalo con "+ Cash collected".</div>
   ${!cls.length?`<div class="empty"><div class="g">SIN CLIENTES GROWTH</div>Cada cliente lleva su % y, si vinculás su CRM, el cash collected entra solo.</div>`:""}
   ${grupo("growth")}${grupo("closing")}
   <section class="grid g-2">
@@ -995,8 +992,7 @@ function openComprobante(cid,qid){
 /* ============================================================
    VISTA · TOTAL (toda la empresa)
    ============================================================ */
-function renderTotal(){
-  const el=$("#view-total");
+function renderTotalSections(){
   const fuentes=["growth","closing","consultoria"];
   const porFuente=t=>STATE.clientes.filter(c=>(c.tipo||"growth")===t);
   const ingresoFuente=(t,ym)=>porFuente(t).reduce((a,c)=>a+clienteDevengado(c,ym),0);
@@ -1008,8 +1004,11 @@ function renderTotal(){
   const gastosNeg=MOVS.filter(m=>m.tipo==="gasto"&&m.ambito==="negocio").reduce((a,m)=>a+toUSD(m),0);
   const months=[]; for(let i=11;i>=0;i--) months.push(addMonths(MONTH,-i));
   const maxF=Math.max(1,...fuentes.map(t=>ingresoFuente(t)));
-  el.innerHTML=`
-  <div class="burn" style="margin-top:18px">
+  if(!STATE.clientes.length && !MOVS.length) return "";
+  return `
+  <div class="horizon" style="margin-top:28px"></div>
+  <div class="eyebrow" style="margin:18px 0 4px">Toda la empresa · growth + closing + consultoría</div>
+  <div class="burn" style="margin-top:12px">
     <div class="subkpi"><div class="l">Cash collected clientes</div><div class="v">${fmt(brutoClientes)}</div><div class="s">lo que facturaron todos</div></div>
     <div class="subkpi"><div class="l">Ingresos Primal devengados</div><div class="v ember">${fmt(devTotal)}</div><div class="s">growth + closing + consultoría</div></div>
     <div class="subkpi"><div class="l">Cobrado real</div><div class="v">${fmt(cobTotal)}</div><div class="s">ingresos del negocio en caja</div></div>
@@ -1033,4 +1032,22 @@ function renderTotal(){
       return `<tr onclick="MONTH='${ym}';render()" class="${ym===MONTH?"cur":""}"><td class="mono" style="${ym===MONTH?"color:var(--gold-2)":""}">${monthLabel(ym)}</td><td class="num">${g?fmt(g):"—"}</td><td class="num">${cl?fmt(cl):"—"}</td><td class="num">${co?fmt(co):"—"}</td><td class="num">${ot?fmt(ot):"—"}</td><td class="num ember">${tot?fmt(tot):"—"}</td><td class="num">${cob?fmt(cob):"—"}</td><td class="num bad">${gas?"−"+fmt(gas):"—"}</td><td class="num ${cob-gas<0?"bad":""}">${(cob||gas)?fmt(cob-gas):"—"}</td></tr>`; }).join("")}
     </tbody></table>
   </div>`;
+}
+
+/* ---------- vincular CRM de un cliente (modal propio) ---------- */
+function openLink(id){
+  const c=STATE.clientes.find(x=>x.id===id); if(!c) return; const L=c.link||{};
+  openModal({ title:`Vincular CRM · <i>${esc(c.nombre)}</i>`, del:!!(L.url), saveLabel:"Guardar y sincronizar", body:`
+    <div class="mini" style="text-transform:none;letter-spacing:.04em;font-size:12px;color:var(--muted)">Abrí el <b>index.html</b> del CRM de ${esc(c.nombre)} (o su proyecto en Supabase → Project Settings → API) y copiá las dos constantes <b>SUPABASE_URL</b> y <b>SUPABASE_ANON_KEY</b>. Primal leerá su tabla de pagos y calculará tu ${pctCliente(c)}% solo, en tiempo real.</div>
+    <div class="f"><label>SUPABASE_URL del CRM del cliente</label><input id="l-url" class="mono" value="${esc(L.url||"")}" placeholder="https://xxxxxxxx.supabase.co" /></div>
+    <div class="f"><label>SUPABASE_ANON_KEY (publishable)</label><input id="l-key" class="mono" value="${esc(L.key||"")}" placeholder="eyJhbGciOi… / sb_publishable_…" /></div>
+    <div class="f3"><div class="f"><label>Tabla de pagos</label><input id="l-tabla" class="mono" value="${esc(L.tabla||"pagos")}" /></div><div class="f"><label>Columna monto (USD)</label><input id="l-monto" class="mono" value="${esc(L.campoMonto||"usd")}" /></div><div class="f"><label>Contar desde</label><input id="l-desde" type="date" value="${esc(L.desde||"")}" /><div class="mini">fecha de inicio del contrato</div></div></div>
+    <div style="display:flex;gap:10px;align-items:center"><button type="button" class="btn sm" id="l-test">Probar conexión</button><span class="mini" id="l-res" style="text-transform:none;letter-spacing:.04em;font-size:12px"></span></div>`,
+    onOpen(){ $("#l-test").onclick=async()=>{ const r=$("#l-res"); r.textContent="probando…"; const res=await fetchExt({url:$("#l-url").value.trim(), key:$("#l-key").value.trim(), tabla:$("#l-tabla").value.trim()||"pagos", campoMonto:$("#l-monto").value.trim()||"usd", campoFecha:"fecha", desde:$("#l-desde").value}); r.innerHTML = res.error ? `<span class="bad">✕ ${esc(res.error)}</span>` : `<span class="ok">✓ ${res.rows.length} pagos · ${fmt(res.rows.reduce((a,x)=>a+x.monto,0))} cash collected · tu parte ${fmt(res.rows.reduce((a,x)=>a+x.monto,0)*pctCliente(c)/100)}</span>`; }; },
+    async onSave(){ const url=$("#l-url").value.trim(), key=$("#l-key").value.trim(); if(!url||!key){ toast("Faltan URL o key"); return false; }
+      c.link={url, key, tabla:$("#l-tabla").value.trim()||"pagos", campoMonto:$("#l-monto").value.trim()||"usd", campoFecha:"fecha", desde:$("#l-desde").value};
+      if(EXT[c.id]&&EXT[c.id].ch){ try{ EXT[c.id].ch.unsubscribe(); }catch(e){} } delete EXT[c.id];
+      await saveState("clientes"); toast(`${c.nombre}: CRM vinculado`); render(); syncExt(c); },
+    async onDelete(){ if(!confirm("¿Desvincular el CRM? Los pagos dejarán de entrar solos.")) return false; if(EXT[c.id]&&EXT[c.id].ch){ try{ EXT[c.id].ch.unsubscribe(); }catch(e){} } delete EXT[c.id]; c.link=null; await saveState("clientes"); render(); }
+  });
 }
