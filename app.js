@@ -175,7 +175,14 @@ function burnPromedio(){ // promedio de gastos de los últimos 3 meses cerrados 
 function clienteCobrado(cl){ return MOVS.filter(m=>m.tipo==="ingreso" && m.cliente===cl.nombre).reduce((a,m)=>a+toUSD(m),0); }
 function cobrosDe(cl){ return (STATE.cobros||[]).filter(c=>c.clienteId===cl.id); }
 function extSum(cl, ym){ const e=EXT[cl.id]; if(!e||!e.rows) return 0; return e.rows.filter(r=>!ym||ymOf(r.fecha)===ym).reduce((a,r)=>a+(Number(r.monto)||0),0); }
-function cuotasPagadas(cl, ym){ return (cl.cuotas||[]).filter(q=>q.pagada && (!ym||ymOf(q.pagadaEl||q.fecha||"")===ym)).reduce((a,q)=>a+(Number(q.monto)||0),0); }
+function cuotasPagadas(cl, ym){ return (cl.cuotas||[]).filter(q=>q.pagada && !q.previo && (!ym||ymOf(q.pagadaEl||q.fecha||"")===ym)).reduce((a,q)=>a+(Number(q.monto)||0),0); }
+/* Revenue = valor de lo cerrado: contratos de consultoría (por fecha de cierre) + tu parte devengada de growth/closing */
+function revenueMes(ym){
+  const cons=STATE.clientes.filter(c=>c.tipo==="consultoria").filter(c=>{ const f=c.cierre||((c.cuotas||[]).map(q=>q.fecha).filter(Boolean).sort()[0])||""; return ym ? ymOf(f)===ym : true; }).reduce((a,c)=>a+(Number(c.total)||0),0);
+  const gr=STATE.clientes.filter(c=>c.tipo!=="consultoria").reduce((a,c)=>a+clienteDevengado(c,ym),0);
+  return cons+gr;
+}
+function cashCollectedMes(ym){ return MOVS.filter(m=>m.tipo==="ingreso"&&(!ym||ymOf(m.fecha)===ym)).reduce((a,m)=>a+toUSD(m),0); }
 function clienteBruto(cl, ym){ if(cl.tipo==="consultoria") return Math.max(cuotasPagadas(cl,ym), ym?0:clienteCobrado(cl)); return extSum(cl,ym)+cobrosDe(cl).filter(c=>!ym||ymOf(c.fecha)===ym).reduce((a,c)=>a+(Number(c.bruto)||0),0); }
 function clienteDevengado(cl, ym){ if(cl.tipo==="consultoria") return clienteBruto(cl,ym); return extSum(cl,ym)*pctCliente(cl)/100 + cobrosDe(cl).filter(c=>!ym||ymOf(c.fecha)===ym).reduce((a,c)=>a+(Number(c.mio)||0),0); }
 function clientePendiente(cl){ return Math.max(0, clienteDevengado(cl)-clienteCobrado(cl)); }
@@ -189,12 +196,14 @@ async function seedClientesReales(){
   const ny=STATE.clientes.find(c=>!c.demo && c.nombre==="NYLO" && c.link && !c.link.desde); if(ny){ ny.link.desde=LINK_NYLO.desde; await saveState("clientes"); }
   // registros reales iniciales (se cargan una sola vez por dispositivo hasta que Primal tenga Supabase)
   if(!STATE.config.seedDiego && !STATE.clientes.some(c=>c.nombre==="Diego Ospino") && !MOVS.some(m=>m.concepto==="Diego Ospino · Pago 1 (310 EUR)")){
-    const cu={id:"cuota-diego-1",label:"Pago 1",monto:350,fecha:"2026-10-02",pagada:true,pagadaEl:"2026-10-02",medio:"",comprobante:"https://drive.google.com/file/d/1v2EzsrepHHLc2ZL455Q6Kd61GscxEO4K/view?usp=sharing",movId:"mov-diego-1"};
-    STATE.clientes.push({id:"cli-diego",nombre:"Diego Ospino",servicio:"Consultoría",tipo:"consultoria",pct:100,total:350,estado:"activo",cuenta:"",notas:"Primer pago de consultoría de Primal. 310 EUR ≈ 350 USD.",telefono:"+34 647 85 56 80",email:"kryptoneerbusiness@gmail.com",tipoCuota:"Pago único",medio:"",link:null,cuotas:[cu]});
-    MOVS.unshift({id:"mov-diego-1",fecha:"2026-10-02",ambito:"negocio",tipo:"ingreso",monto:350,moneda:"USD",cuenta:"",cuenta_destino:"",categoria:"Consultoría",concepto:"Diego Ospino · Pago 1 (310 EUR)",cliente:"Diego Ospino",notas:"310 EUR convertidos a 350 USD. Comprobante en Drive (Comprobantes octubre).",demo:false,created_at:new Date().toISOString()});
+    const cu1={id:"cuota-diego-1",label:"Pago 1",monto:1150,fecha:"",pagada:true,pagadaEl:"",previo:true,medio:"",comprobante:"",movId:""};
+    const cu2={id:"cuota-diego-2",label:"Pago 2",monto:350,fecha:"2026-10-02",pagada:true,pagadaEl:"2026-10-02",medio:"Transferencia",comprobante:"https://drive.google.com/file/d/1v2EzsrepHHLc2ZL455Q6Kd61GscxEO4K/view?usp=sharing",movId:"mov-diego-1"};
+    STATE.clientes.push({id:"cli-diego",nombre:"Diego Ospino",servicio:"Consultoría",tipo:"consultoria",pct:100,total:1500,cierre:"2026-10-02",estado:"activo",cuenta:"",notas:"Revenue del trato: 1.500 USD. Pago 1 (1.150) fue antes de que Primal llevara caja: cuenta como revenue, no como cash collected. Pago 2: 310 EUR ≈ 350 USD por transferencia.",telefono:"+34 647 85 56 80",email:"kryptoneerbusiness@gmail.com",tipoCuota:"Otro",medio:"Transferencia",link:null,cuotas:[cu1,cu2]});
+    MOVS.unshift({id:"mov-diego-1",fecha:"2026-10-02",ambito:"negocio",tipo:"ingreso",monto:350,moneda:"USD",cuenta:"",cuenta_destino:"",categoria:"Consultoría",concepto:"Diego Ospino · Pago 2 (310 EUR)",cliente:"Diego Ospino",notas:"310 EUR convertidos a 350 USD. Transferencia. Comprobante en Drive (Comprobantes octubre).",demo:false,created_at:new Date().toISOString()});
     if(sb){ await sb.from("pg_movimientos").upsert(MOVS[0]); } 
     STATE.config.seedDiego=true; await saveState("clientes"); await saveState("config"); saveLocal();
   }
+  const dg=STATE.clientes.find(c=>c.id==="cli-diego"); if(dg && (dg.cuotas||[]).length===1){ dg.total=1500; dg.cierre="2026-10-02"; dg.medio="Transferencia"; dg.tipoCuota="Otro"; dg.cuotas=[{id:"cuota-diego-1",label:"Pago 1",monto:1150,fecha:"",pagada:true,pagadaEl:"",previo:true,medio:"",comprobante:"",movId:""},Object.assign(dg.cuotas[0],{label:"Pago 2",medio:"Transferencia"})]; const mv=MOVS.find(m=>m.id==="mov-diego-1"); if(mv){ mv.concepto="Diego Ospino · Pago 2 (310 EUR)"; if(sb) await updMov(mv.id,{concepto:mv.concepto}); } await saveState("clientes"); saveLocal(); }
   if(STATE.config.seedClientes) return;
   if(!STATE.clientes.some(c=>!c.demo)){
     [["Estiven","Growth partner",25,null],["Amelia","Growth partner",12.5,null],["NYLO","Growth partner",27.5,Object.assign({},LINK_NYLO)]].forEach(([n,sv,p,l])=>STATE.clientes.push({id:uid(),nombre:n,servicio:sv,tipo:"growth",pct:p,total:0,estado:"activo",cuenta:"",notas:"",cuotas:[],telefono:"",email:"",link:l}));
@@ -242,20 +251,26 @@ function renderMando(){
   const hasData = MOVS.length>0 || STATE.cuentas.length>0;
   const scopeTxt = "negocio";
 
+  const ccMes=cashCollectedMes(MONTH), ccPrev=cashCollectedMes(addMonths(MONTH,-1)), ccTot=cashCollectedMes(null);
+  const rev=revenueMes(MONTH), profit=ccMes-t.gasto;
+  const dCC = ccPrev>0 ? ((ccMes-ccPrev)/ccPrev*100) : null;
   el.innerHTML = `
   <section class="hero">
     <div class="hero-num">
-      <div class="eyebrow">Cash disponible</div>
-      <div class="big ${cash<0?'bad':''}">${fmt(cash)}</div>
-      <div class="delta">${runway==null ? "sin gastos registrados todavía" : runway>=24 ? "runway <b class='ok'>+24 meses</b>" : `runway <b class="${runway<2?'bad':runway<4?'warn':'ok'}">${runway.toFixed(1)} meses</b> al ritmo actual`}</div>
-      <div class="subkpis">
-        <div class="subkpi"><div class="l">Ingresos · ${monthLabel(MONTH).split(" ")[0]}</div><div class="v">${fmt(t.ingreso)}</div><div class="s">${deltaIng==null?"sin mes anterior":`<span class="${deltaIng>=0?'ok':'bad'}">${deltaIng>=0?'▲':'▼'} ${Math.abs(deltaIng).toFixed(0)}%</span> vs mes anterior`}</div></div>
-        <div class="subkpi"><div class="l">Gastos · ${monthLabel(MONTH).split(" ")[0]}</div><div class="v" style="color:var(--red-2)">${fmt(t.gasto)}</div><div class="s">${t.ingreso>0?`${(t.gasto/t.ingreso*100).toFixed(0)}% de lo que entró`:"—"}</div></div>
+      <div class="eyebrow">Cash collected · ${monthLabel(MONTH)}</div>
+      <div class="big ember">${fmt(ccMes)}</div>
+      <div class="delta">${dCC==null ? `acumulado <b>${fmt(ccTot)}</b>` : `<b class="${dCC>=0?'ok':'bad'}">${dCC>=0?'▲':'▼'} ${Math.abs(dCC).toFixed(0)}%</b> vs mes anterior · acumulado <b>${fmt(ccTot)}</b>`}</div>
+      <div class="subkpis" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="subkpi"><div class="l">Revenue</div><div class="v">${fmt(rev)}</div><div class="s">cerrado este mes</div></div>
+        <div class="subkpi"><div class="l">Gastos</div><div class="v" style="color:var(--red-2)">${fmt(t.gasto)}</div><div class="s">${ccMes>0?`${(t.gasto/ccMes*100).toFixed(0)}% del cash`:"—"}</div></div>
+        <div class="subkpi"><div class="l">Profit</div><div class="v ${profit<0?'bad':''}">${fmt(profit)}</div><div class="s">${ccMes>0?`margen ${(profit/ccMes*100).toFixed(0)}%`:"—"}</div></div>
       </div>
       <div class="meta">
-        <div class="row"><span>Objetivo del mes</span><b>${fmt(t.ingreso)} / ${fmt(objetivo)}</b></div>
-        <div class="bar"><i class="${pct>=100?'done':''}" style="width:${pct}%"></i></div>
-        <div class="row" style="margin-top:7px"><span>${pct>=100?"objetivo cumplido":"faltan "+fmt(Math.max(0,objetivo-t.ingreso))}</span><span>${pct.toFixed(0)}%</span></div>
+        <div class="row"><span>Objetivo del mes</span><b>${fmt(ccMes)} / ${fmt(objetivo)}</b></div>
+        <div class="bar"><i class="${(objetivo>0?Math.min(100,ccMes/objetivo*100):0)>=100?'done':''}" style="width:${objetivo>0?Math.min(100,ccMes/objetivo*100):0}%"></i></div>
+        <div class="row" style="margin-top:7px"><span>${objetivo>0&&ccMes>=objetivo?"objetivo cumplido":"faltan "+fmt(Math.max(0,objetivo-ccMes))}</span><span>${objetivo>0?Math.min(100,ccMes/objetivo*100).toFixed(0):0}%</span></div>
+        <div class="row" style="margin-top:9px;padding-top:9px;border-top:1px solid var(--line)"><span>Cash disponible en cuentas</span><b class="${cash<0?'bad':''}">${fmt(cash)}</b></div>
+        <div class="row" style="margin-top:4px"><span>Runway</span><b>${runway==null?"—":runway>=24?"+24 meses":runway.toFixed(1)+" meses"}</b></div>
       </div>
     </div>
     <div class="skyline">
@@ -493,7 +508,7 @@ function openClienteDetalle(id){
     <div style="display:flex;gap:8px;flex-wrap:wrap">${c.tipo==="consultoria"?"":`<button type="button" class="btn gold sm" onclick="closeModal();openCobro('${c.id}')">+ Cash collected</button>`}${c.tipo!=="consultoria"&&clientePendiente(c)>0.5?`<button type="button" class="btn sm" onclick="closeModal();cobrarSaldo('${c.id}')">Cobrar saldo ${fmt(clientePendiente(c))}</button>`:""}<button type="button" class="btn sm" onclick="closeModal();openMov(null,{tipo:'ingreso',ambito:'negocio',cliente:'${esc(c.nombre)}',categoria:'${CAT_TIPO[c.tipo]||"Ventas"}',cuenta:'${esc(c.cuenta||"")}'})">+ Pago recibido</button></div>
     ${(c.telefono||c.email)?`<div class="mini">${c.telefono?`<a href="https://wa.me/${esc(String(c.telefono).replace(/[^0-9]/g,""))}" target="_blank">${esc(c.telefono)}</a>`:""} ${c.email?` · <a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:""}${c.tipoCuota?` · ${esc(c.tipoCuota)}`:""}${c.medio?` · ${esc(c.medio)}`:""}</div>`:""}
     ${c.link&&c.link.url?`<div class="f"><label>Pagos del CRM vinculado ${extBadge(c)}</label>${(()=>{ const e=EXT[c.id]; if(!e||!e.rows||!e.rows.length) return `<div class="mini">${e&&e.error?esc(e.error):"sin pagos todavía"}</div>`; return `<div class="list">${e.rows.slice(0,12).map(r=>`<div class="row"><div class="a"><b>${fmt(r.monto)} · ${esc(clipTxt(r.concepto||"pago",50))}</b><small>${esc(r.fecha)}${r.closer?" · "+esc(r.closer):""}${r.metodo?" · "+esc(r.metodo):""}</small></div><div class="b ember">${fmt(r.monto*pctCliente(c)/100)}<small>${pctCliente(c)}%</small></div></div>`).join("")}</div>`; })()}</div>`:""}
-    ${(c.cuotas||[]).length?`<div class="f"><label>Cuotas</label><div class="list">${c.cuotas.slice().sort((a,b)=>(a.fecha||"9999").localeCompare(b.fecha||"9999")).map(q=>`<div class="row click" onclick="closeModal();openComprobante('${c.id}','${q.id}')"><div class="a"><b>${esc(q.label||"cuota")}</b><small>${esc(q.fecha||"s/f")}${q.medio?" · "+esc(q.medio):""}${q.comprobante?" · comprobante ✓":""}</small></div><div class="b">${fmt(q.monto)}<small>${q.pagada?'<span class="ok">pagada</span>':`<button class="btn xs gold" onclick="event.stopPropagation();closeModal();cobrarCuota('${c.id}','${q.id}')">cobrar</button>`}</small></div></div>`).join("")}</div></div>`:""}
+    ${(c.cuotas||[]).length?`<div class="f"><label>Cuotas</label><div class="list">${c.cuotas.slice().sort((a,b)=>(a.fecha||"9999").localeCompare(b.fecha||"9999")).map(q=>`<div class="row click" onclick="closeModal();openComprobante('${c.id}','${q.id}')"><div class="a"><b>${esc(q.label||"cuota")}</b><small>${esc(q.fecha||(q.previo?"antes de Primal":"s/f"))}${q.medio?" · "+esc(q.medio):""}${q.comprobante?" · comprobante ✓":""}</small></div><div class="b">${fmt(q.monto)}<small>${q.previo?'<span class="dim">previa</span>':q.pagada?'<span class="ok">pagada</span>':`<button class="btn xs gold" onclick="event.stopPropagation();closeModal();cobrarCuota('${c.id}','${q.id}')">cobrar</button>`}</small></div></div>`).join("")}</div></div>`:""}
     <div class="f"><label>Cash collected manual</label>${!list.length?`<div class="mini">Nada todavía.</div>`:`<div class="list">${list.slice(0,15).map(x=>`<div class="row click" onclick="closeModal();openCobro(null,'${x.id}')"><div class="a"><b>${fmt(x.bruto)} · ${esc(x.concepto||"cash collected")}</b><small>${esc(x.fecha)} · ${x.pct}%</small></div><div class="b">${fmt(x.mio)}<small>${x.pagado?'<span class="ok">cobrado</span>':'<span class="warn">pendiente</span>'}</small></div></div>`).join("")}</div>`}</div>
     <div class="f"><label>Pagos recibidos (movimientos)</label>${!movs.length?`<div class="mini">Ninguno.</div>`:`<div class="list">${movs.slice(0,10).map(m=>`<div class="row click" onclick="closeModal();openMov('${m.id}')"><div class="a"><b>${esc(m.concepto||m.categoria)}</b><small>${esc(m.fecha)} · @${esc(m.cuenta||"—")}</small></div><div class="b ember">+${fmt(toUSD(m))}</div></div>`).join("")}</div>`}</div>`,
     onSave(){ closeModal(); openCliente(id); return false; }
@@ -543,7 +558,7 @@ function openCliente(id, tipoPreset){
     <div class="f3"><div class="f" id="c-pct-wrap"><label>Mi % del cash collected</label><input id="c-pct" class="mono" type="number" step="0.1" value="${c.pct!=null?c.pct:25}" /></div>
       <div class="f"><label>Estado</label><select id="c-estado">${["activo","pausa","cerrado"].map(s=>`<option ${c.estado===s?"selected":""}>${s}</option>`).join("")}</select></div>
       <div class="f"><label>Cobra en</label><select id="c-cuenta"><option value="">— cuenta —</option>${STATE.cuentas.map(k=>`<option ${c.cuenta===k.nombre?"selected":""}>${esc(k.nombre)}</option>`).join("")}</select></div></div>
-    <div class="f3"><div class="f"><label>Contrato total (USD)</label><input id="c-total" class="mono" type="number" step="0.01" value="${c.total||""}" /></div><div class="f"><label>Tipo de cuota</label><select id="c-tcuota">${["Pago único","Mensual","Quincenal","Semanal","50/50","3 cuotas","Otro"].map(t=>`<option ${(c.tipoCuota||"Pago único")===t?"selected":""}>${t}</option>`).join("")}</select></div><div class="f"><label>Medio de pago habitual</label><select id="c-medio">${MEDIOS.map(t=>`<option ${(c.medio||"")===t?"selected":""}>${t}</option>`).join("")}</select></div></div>
+    <div class="f3"><div class="f"><label>Revenue · contrato total (USD)</label><input id="c-total" class="mono" type="number" step="0.01" value="${c.total||""}" /><div class="mini">cierre: <input id="c-cierre" type="date" value="${esc(c.cierre||"")}" style="padding:3px 6px;font-size:11px;width:auto" /></div></div><div class="f"><label>Tipo de cuota</label><select id="c-tcuota">${["Pago único","Mensual","Quincenal","Semanal","50/50","3 cuotas","Otro"].map(t=>`<option ${(c.tipoCuota||"Pago único")===t?"selected":""}>${t}</option>`).join("")}</select></div><div class="f"><label>Medio de pago habitual</label><select id="c-medio">${MEDIOS.map(t=>`<option ${(c.medio||"")===t?"selected":""}>${t}</option>`).join("")}</select></div></div>
     <div class="f" id="c-link-wrap"><label>CRM del cliente</label><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${extBadge(c)}<button type="button" class="btn xs" onclick="closeModal();openLink('${c.id}')">${c.link&&c.link.url?"Editar vínculo":"Vincular CRM"}</button></div></div>
     <div class="f"><label>Plan de cuotas (opcional) <button class="btn xs ghost" type="button" id="c-add" style="margin-left:8px">+ cuota</button> <button class="btn xs ghost" type="button" id="c-split" style="margin-left:4px">dividir total en N</button></label>
       <div class="cuota-list" id="c-cuotas"></div></div>
@@ -567,7 +582,7 @@ function openCliente(id, tipoPreset){
     async onSave(){
       c.nombre=$("#c-nombre").value.trim(); if(!c.nombre){toast("Falta el nombre");return false;}
       c.servicio=$("#c-serv").value.trim(); c.tipo=pickVal("#c-tipo")||"growth"; c.pct=c.tipo==="consultoria"?100:(Number($("#c-pct").value)||0); c.total=Number($("#c-total").value)||0; c.estado=$("#c-estado").value; c.cuenta=$("#c-cuenta").value; c.notas=$("#c-notas").value; c.cuotas=cuotas;
-      c.telefono=$("#c-tel").value.trim(); c.email=$("#c-email").value.trim(); c.tipoCuota=$("#c-tcuota").value; c.medio=$("#c-medio").value;
+      c.telefono=$("#c-tel").value.trim(); c.email=$("#c-email").value.trim(); c.tipoCuota=$("#c-tcuota").value; c.medio=$("#c-medio").value; c.cierre=$("#c-cierre").value;
       if(c.tipo==="consultoria") c.link=null;
       if(!id) STATE.clientes.push(c); await saveState("clientes"); toast("Cliente guardado"); render();
     },
@@ -946,7 +961,7 @@ function renderConsultoria(){
   el.innerHTML=`
   <div class="burn" style="margin-top:18px">
     <div class="subkpi"><div class="l">Cash collected</div><div class="v ember">${fmt(cob)}</div><div class="s">100% tuyo · ${cls.length} clientes</div></div>
-    <div class="subkpi"><div class="l">Contratado</div><div class="v">${fmt(tot)}</div><div class="s">${tot?((cob/tot)*100).toFixed(0):0}% cobrado</div></div>
+    <div class="subkpi"><div class="l">Revenue</div><div class="v">${fmt(tot)}</div><div class="s">${tot?((cob/tot)*100).toFixed(0):0}% en caja de Primal</div></div>
     <div class="subkpi"><div class="l">Cuotas por cobrar</div><div class="v ${pend>0?"bad":""}">${fmt(pend)}</div><div class="s">${cls.reduce((a,c)=>a+(c.cuotas||[]).filter(q=>!q.pagada).length,0)} cuotas</div></div>
     <div class="subkpi"><div class="l">${monthLabel(MONTH)}</div><div class="v">${fmt(cls.reduce((a,c)=>a+MOVS.filter(m=>m.tipo==="ingreso"&&m.cliente===c.nombre&&ymOf(m.fecha)===MONTH).reduce((x,m)=>x+toUSD(m),0),0))}</div><div class="s">cobrado este mes</div></div>
     <div class="subkpi" style="display:flex;align-items:center;justify-content:center"><button class="btn gold sm" onclick="openCliente(null,'consultoria')">+ Cliente consultoría</button></div>
@@ -954,7 +969,7 @@ function renderConsultoria(){
   <div class="panel" style="overflow-x:auto">
     <h3>Clientes de consultoría <span class="sub">clic en la fila para ver, editar o cobrar</span></h3>
     ${!cls.length?`<div class="empty"><div class="g">SIN CLIENTES</div>Nombre, contacto, email, cash collected, tipo de cuota, fecha de cuota, medio de pago y comprobante.</div>`:`
-    <table class="tbl"><thead><tr><th>Cliente</th><th>Contacto</th><th>Email</th><th class="num">Contrato</th><th class="num">Cash collected</th><th>Tipo de cuota</th><th>Próxima cuota</th><th>Medio</th><th>Comprobante</th><th>Estado</th></tr></thead><tbody>
+    <table class="tbl"><thead><tr><th>Cliente</th><th>Contacto</th><th>Email</th><th class="num">Revenue</th><th class="num">Cash collected</th><th>Tipo de cuota</th><th>Próxima cuota</th><th>Medio</th><th>Comprobante</th><th>Estado</th></tr></thead><tbody>
     ${cls.map(c=>{ const nq=proximaCuota(c); const last=(c.cuotas||[]).filter(q=>q.pagada).sort((a,b)=>(b.pagadaEl||b.fecha||"").localeCompare(a.pagadaEl||a.fecha||""))[0];
       return `<tr onclick="openClienteDetalle('${c.id}')"><td><b>${esc(c.nombre)}</b><br><small class="dim">${esc(c.servicio||"")}</small></td><td>${c.telefono?`<a href="https://wa.me/${esc(String(c.telefono).replace(/[^0-9]/g,""))}" target="_blank" onclick="event.stopPropagation()">${esc(c.telefono)}</a>`:"—"}</td><td>${c.email?`<a href="mailto:${esc(c.email)}" onclick="event.stopPropagation()">${esc(c.email)}</a>`:"—"}</td><td class="num">${fmt(c.total||0)}</td><td class="num ember">${fmt(clienteCobrado(c))}</td><td>${esc(c.tipoCuota||"—")}</td><td>${nq?`<span class="${nq.fecha&&nq.fecha<hoy?"bad":""}">${esc(nq.fecha||"s/f")}</span> · ${fmt(nq.monto)}`:"<span class='dim'>al día</span>"}</td><td>${esc(c.medio||(last&&last.medio)||"—")}</td><td>${last&&last.comprobante?`<a href="${esc(last.comprobante)}" target="_blank" onclick="event.stopPropagation()">ver</a>`:"<span class='dim'>—</span>"}</td><td><span class="tag ${c.estado==="activo"?"ok":c.estado==="cerrado"?"":"warn"}">${esc(c.estado||"activo")}</span></td></tr>`; }).join("")}
     </tbody></table>`}
@@ -976,12 +991,12 @@ function renderCuotas(){
     <div class="subkpi"><div class="l">Por cobrar</div><div class="v ${pend.length?"bad":""}">${fmt(sum(pend))}</div><div class="s">${pend.length} cuotas</div></div>
     <div class="subkpi"><div class="l">Vencidas</div><div class="v ${venc.length?"bad":"dim"}">${fmt(sum(venc))}</div><div class="s">${venc.length} cuotas</div></div>
     <div class="subkpi"><div class="l">Próximos 30 días</div><div class="v">${fmt(sum(pend.filter(x=>x.q.fecha&&x.q.fecha>=hoy&&x.q.fecha<=addDays(hoy,30))))}</div></div>
-    <div class="subkpi"><div class="l">Cobradas</div><div class="v ember">${fmt(sum(all.filter(x=>x.q.pagada)))}</div><div class="s">${all.filter(x=>x.q.pagada).length} cuotas</div></div>
+    <div class="subkpi"><div class="l">Cobradas (cash collected)</div><div class="v ember">${fmt(sum(all.filter(x=>x.q.pagada&&!x.q.previo)))}</div><div class="s">${all.filter(x=>x.q.pagada&&!x.q.previo).length} cuotas${all.some(x=>x.q.previo)?` · ${fmt(sum(all.filter(x=>x.q.previo)))} previas a Primal`:""}</div></div>
   </div>
   <div class="filters"><div class="seg">${["pendientes","pagadas","todas"].map(f=>`<button data-cf="${f}" class="${CUOTAS_F===f?"active":""}">${f}</button>`).join("")}</div><span class="spacer"></span><span class="mini">las cuotas se crean dentro de cada cliente</span></div>
   <div class="panel" style="overflow-x:auto">
     ${!list.length?`<div class="empty" style="padding:20px">Nada por acá.</div>`:`<table class="tbl"><thead><tr><th>Fecha</th><th>Cliente</th><th>Cuota</th><th class="num">Monto</th><th>Medio</th><th>Comprobante</th><th>Estado</th><th></th></tr></thead><tbody>
-    ${list.map(({c,q})=>`<tr onclick="openComprobante('${c.id}','${q.id}')"><td class="mono">${esc(q.fecha||"—")}${q.pagada&&q.pagadaEl?`<br><small class="dim">pagada ${esc(q.pagadaEl)}</small>`:""}</td><td><b>${esc(c.nombre)}</b><br><small class="dim">${TIPOS_CLIENTE[c.tipo]||""}</small></td><td>${esc(q.label||"")}</td><td class="num">${fmt(q.monto)}</td><td>${esc(q.medio||c.medio||"—")}</td><td>${q.comprobante?`<a href="${esc(q.comprobante)}" target="_blank" onclick="event.stopPropagation()">ver</a>`:"<span class='dim'>—</span>"}</td><td>${q.pagada?`<span class="tag ok">pagada</span>`:q.fecha&&q.fecha<hoy?`<span class="tag warn">vencida</span>`:`<span class="tag">pendiente</span>`}</td><td>${q.pagada?"":`<button class="btn xs gold" onclick="event.stopPropagation();cobrarCuota('${c.id}','${q.id}')">cobrar</button>`}</td></tr>`).join("")}
+    ${list.map(({c,q})=>`<tr onclick="openComprobante('${c.id}','${q.id}')"><td class="mono">${esc(q.fecha||"—")}${q.pagada&&q.pagadaEl?`<br><small class="dim">pagada ${esc(q.pagadaEl)}</small>`:""}</td><td><b>${esc(c.nombre)}</b><br><small class="dim">${TIPOS_CLIENTE[c.tipo]||""}</small></td><td>${esc(q.label||"")}</td><td class="num">${fmt(q.monto)}</td><td>${esc(q.medio||c.medio||"—")}</td><td>${q.comprobante?`<a href="${esc(q.comprobante)}" target="_blank" onclick="event.stopPropagation()">ver</a>`:"<span class='dim'>—</span>"}</td><td>${q.previo?`<span class="tag" title="cobrada antes de que Primal llevara caja">previa</span>`:q.pagada?`<span class="tag ok">pagada</span>`:q.fecha&&q.fecha<hoy?`<span class="tag warn">vencida</span>`:`<span class="tag">pendiente</span>`}</td><td>${q.pagada?"":`<button class="btn xs gold" onclick="event.stopPropagation();cobrarCuota('${c.id}','${q.id}')">cobrar</button>`}</td></tr>`).join("")}
     </tbody></table>`}
   </div>`;
   $$("[data-cf]",el).forEach(b=>b.onclick=()=>{CUOTAS_F=b.dataset.cf;render();});
@@ -991,13 +1006,14 @@ function openComprobante(cid,qid){
   const c=STATE.clientes.find(x=>x.id===cid); const q=c&&(c.cuotas||[]).find(x=>x.id===qid); if(!q) return;
   openModal({ title:`<i>›</i> ${esc(c.nombre)} · ${esc(q.label||"cuota")}`, body:`
     <div class="f3"><div class="f"><label>Monto</label><input id="q-monto" class="mono" type="number" step="0.01" value="${q.monto||""}" /></div><div class="f"><label>Fecha de cuota</label><input id="q-fecha" type="date" value="${esc(q.fecha||"")}" /></div><div class="f"><label>Estado</label><div class="pick" id="q-pag"><button type="button" data-v="0" class="${!q.pagada?"on":""}">Pendiente</button><button type="button" data-v="1" class="${q.pagada?"on ember":""}">Pagada</button></div></div></div>
+    <div class="f"><label>Cobrada antes de Primal <span class="sub" style="text-transform:none;letter-spacing:0;color:var(--dim)">· cuenta como revenue, no como cash collected</span></label><div class="pick" id="q-prev"><button type="button" data-v="0" class="${!q.previo?"on":""}">No</button><button type="button" data-v="1" class="${q.previo?"on":""}">Sí, previa</button></div></div>
     <div class="f2"><div class="f"><label>Medio de pago</label><select id="q-medio">${MEDIOS.map(t=>`<option ${(q.medio||c.medio||"")===t?"selected":""}>${t||"—"}</option>`).join("")}</select></div><div class="f"><label>Fecha de pago</label><input id="q-pagadaEl" type="date" value="${esc(q.pagadaEl||"")}" /></div></div>
     <div class="f"><label>Comprobante (link)</label><input id="q-comp" value="${esc(q.comprobante&&!q.comprobante.startsWith("data:")?q.comprobante:"")}" placeholder="https://… (Drive, captura, Stripe)" /></div>
     <div class="f"><label>o subir imagen / PDF (máx 1 MB)</label><input id="q-file" type="file" accept="image/*,application/pdf" /><div class="mini" id="q-file-info">${q.comprobante&&q.comprobante.startsWith("data:")?`archivo adjunto · <a href="${q.comprobante}" target="_blank">ver</a>`:""}</div></div>
     ${q.comprobante&&q.comprobante.startsWith("data:image")?`<img src="${q.comprobante}" style="max-width:100%;border-radius:10px;border:1px solid var(--line)" />`:""}
     <div class="mini">${q.movId?"Esta cuota ya tiene su ingreso en Movimientos.":"Marcar como pagada sin pasar por \"cobrar\" NO crea el ingreso: usá el botón cobrar para que entre a Movimientos."}</div>`,
-    onOpen(){ pickInit("#q-pag"); let fileData=null; $("#q-file").onchange=e=>{ const f=e.target.files[0]; if(!f) return; if(f.size>1024*1024){ toast("Archivo muy pesado (máx 1 MB)"); e.target.value=""; return; } const r=new FileReader(); r.onload=()=>{ fileData=r.result; $("#q-file-info").textContent=`${f.name} listo para guardar`; }; r.readAsDataURL(f); }; MODAL._file=()=>fileData; },
-    async onSave(){ q.monto=Number($("#q-monto").value)||0; q.fecha=$("#q-fecha").value; q.pagada=pickVal("#q-pag")==="1"; q.medio=$("#q-medio").value; q.pagadaEl=$("#q-pagadaEl").value||(q.pagada?(q.pagadaEl||todayStr()):""); const f=MODAL._file&&MODAL._file(); const link=$("#q-comp").value.trim(); if(f) q.comprobante=f; else if(link) q.comprobante=link; else if(q.comprobante&&!q.comprobante.startsWith("data:")) q.comprobante="";
+    onOpen(){ pickInit("#q-pag"); pickInit("#q-prev"); let fileData=null; $("#q-file").onchange=e=>{ const f=e.target.files[0]; if(!f) return; if(f.size>1024*1024){ toast("Archivo muy pesado (máx 1 MB)"); e.target.value=""; return; } const r=new FileReader(); r.onload=()=>{ fileData=r.result; $("#q-file-info").textContent=`${f.name} listo para guardar`; }; r.readAsDataURL(f); }; MODAL._file=()=>fileData; },
+    async onSave(){ q.monto=Number($("#q-monto").value)||0; q.fecha=$("#q-fecha").value; q.pagada=pickVal("#q-pag")==="1"; q.previo=pickVal("#q-prev")==="1"; if(q.previo) q.pagada=true; q.medio=$("#q-medio").value; q.pagadaEl=$("#q-pagadaEl").value||(q.pagada?(q.pagadaEl||todayStr()):""); const f=MODAL._file&&MODAL._file(); const link=$("#q-comp").value.trim(); if(f) q.comprobante=f; else if(link) q.comprobante=link; else if(q.comprobante&&!q.comprobante.startsWith("data:")) q.comprobante="";
       await saveState("clientes"); toast("Cuota guardada"); render(); }
   });
 }
