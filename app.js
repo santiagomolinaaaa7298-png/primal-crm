@@ -558,14 +558,16 @@ function openCliente(id, tipoPreset){
     <div class="f3"><div class="f" id="c-pct-wrap"><label>Mi % del cash collected</label><input id="c-pct" class="mono" type="number" step="0.1" value="${c.pct!=null?c.pct:25}" /></div>
       <div class="f"><label>Estado</label><select id="c-estado">${["activo","pausa","cerrado"].map(s=>`<option ${c.estado===s?"selected":""}>${s}</option>`).join("")}</select></div>
       <div class="f"><label>Cobra en</label><select id="c-cuenta"><option value="">— cuenta —</option>${STATE.cuentas.map(k=>`<option ${c.cuenta===k.nombre?"selected":""}>${esc(k.nombre)}</option>`).join("")}</select></div></div>
-    <div class="f3"><div class="f"><label>Revenue · contrato total (USD)</label><input id="c-total" class="mono" type="number" step="0.01" value="${c.total||""}" /><div class="mini">cierre: <input id="c-cierre" type="date" value="${esc(c.cierre||"")}" style="padding:3px 6px;font-size:11px;width:auto" /></div></div><div class="f"><label>Tipo de cuota</label><select id="c-tcuota">${["Pago único","Mensual","Quincenal","Semanal","50/50","3 cuotas","Otro"].map(t=>`<option ${(c.tipoCuota||"Pago único")===t?"selected":""}>${t}</option>`).join("")}</select></div><div class="f"><label>Medio de pago habitual</label><select id="c-medio">${MEDIOS.map(t=>`<option ${(c.medio||"")===t?"selected":""}>${t}</option>`).join("")}</select></div></div>
+    <div class="f3"><div class="f"><label>Revenue · contrato total (USD)</label><input id="c-total" class="mono" type="number" step="0.01" value="${c.total||""}" /><div class="mini">cierre: <input id="c-cierre" type="date" value="${esc(c.cierre||"")}" style="padding:3px 6px;font-size:11px;width:auto" /></div></div>
+      <div class="f" id="c-cc-wrap"><label>Cash collected (USD)</label><input id="c-cc" class="mono" type="number" step="0.01" value="${id?clienteCobrado(c):""}" placeholder="lo que ya entró" /><div class="mini">lo que entró de verdad; si subís el número, se registra el pago en Caja</div></div></div>
+    <div class="f3"><div class="f"><label>Tipo de cuota</label><select id="c-tcuota">${["Pago único","Mensual","Quincenal","Semanal","50/50","3 cuotas","Otro"].map(t=>`<option ${(c.tipoCuota||"Pago único")===t?"selected":""}>${t}</option>`).join("")}</select></div><div class="f"><label>Medio de pago habitual</label><select id="c-medio">${MEDIOS.map(t=>`<option ${(c.medio||"")===t?"selected":""}>${t}</option>`).join("")}</select></div></div>
     <div class="f" id="c-link-wrap"><label>CRM del cliente</label><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${extBadge(c)}<button type="button" class="btn xs" onclick="closeModal();openLink('${c.id}')">${c.link&&c.link.url?"Editar vínculo":"Vincular CRM"}</button></div></div>
     <div class="f"><label>Plan de cuotas (opcional) <button class="btn xs ghost" type="button" id="c-add" style="margin-left:8px">+ cuota</button> <button class="btn xs ghost" type="button" id="c-split" style="margin-left:4px">dividir total en N</button></label>
       <div class="cuota-list" id="c-cuotas"></div></div>
     <div class="f"><label>Notas</label><textarea id="c-notas">${esc(c.notas)}</textarea></div>`;
   openModal({ title: id ? `<i>›</i> ${esc(c.nombre)}` : "Nuevo <i>cliente</i>", body: body(), del: !!id,
     onOpen(){
-      const tipoUI=v=>{ $("#c-pct-wrap").classList.toggle("hidden", v==="consultoria"); $("#c-link-wrap").classList.toggle("hidden", v==="consultoria"); if(v==="consultoria") $("#c-pct").value=100; };
+      const tipoUI=v=>{ $("#c-pct-wrap").classList.toggle("hidden", v==="consultoria"); $("#c-link-wrap").classList.toggle("hidden", v==="consultoria"); $("#c-cc-wrap").classList.toggle("hidden", v!=="consultoria"); if(v==="consultoria") $("#c-pct").value=100; };
       pickInit("#c-tipo", tipoUI); tipoUI(c.tipo||"growth");
 
       const list=$("#c-cuotas");
@@ -584,7 +586,13 @@ function openCliente(id, tipoPreset){
       c.servicio=$("#c-serv").value.trim(); c.tipo=pickVal("#c-tipo")||"growth"; c.pct=c.tipo==="consultoria"?100:(Number($("#c-pct").value)||0); c.total=Number($("#c-total").value)||0; c.estado=$("#c-estado").value; c.cuenta=$("#c-cuenta").value; c.notas=$("#c-notas").value; c.cuotas=cuotas;
       c.telefono=$("#c-tel").value.trim(); c.email=$("#c-email").value.trim(); c.tipoCuota=$("#c-tcuota").value; c.medio=$("#c-medio").value; c.cierre=$("#c-cierre").value;
       if(c.tipo==="consultoria") c.link=null;
-      if(!id) STATE.clientes.push(c); await saveState("clientes"); toast("Cliente guardado"); render();
+      if(!id) STATE.clientes.push(c);
+      if(c.tipo==="consultoria" && $("#c-cc").value!==""){
+        const objetivoCC=Number($("#c-cc").value)||0; const ya=clienteCobrado(c); const delta=Math.round((objetivoCC-ya)*100)/100;
+        if(delta>0){ const hoy=todayStr(); const m=await addMov({fecha:hoy, ambito:"negocio", tipo:"ingreso", monto:delta, cuenta:c.cuenta||"", categoria:"Consultoría", concepto:`${c.nombre} · cash collected`, cliente:c.nombre}); const n=(c.cuotas||[]).length+1; c.cuotas.push({id:uid(),label:`Pago ${n}`,monto:delta,fecha:hoy,pagada:true,pagadaEl:hoy,medio:c.medio||"",comprobante:"",movId:m.id}); toast(`+${fmt(delta)} registrado en Caja`); }
+        else if(delta<0){ toast("Para bajar el cash collected, borrá el pago en Caja o en Cuotas"); }
+      }
+      await saveState("clientes"); render();
     },
     async onDelete(){ if(!confirm(`¿Borrar a ${c.nombre}? Los ingresos ya registrados quedan.`)) return false; STATE.clientes=STATE.clientes.filter(x=>x.id!==id); STATE.cobros=(STATE.cobros||[]).filter(x=>x.clienteId!==id); await saveState("clientes"); await saveState("cobros"); render(); }
   });
