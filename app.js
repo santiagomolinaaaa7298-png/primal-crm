@@ -9,7 +9,7 @@ const BRAND = {
   marca: "PRIMAL",            // wordmark de la barra (cambiá acá cuando tengas el nombre definitivo)
   sub:   "Centro de mando",
   objetivoPersonal: 3000,     // USD/mes que querés ganar vos (editable en Config)
-  objetivoNegocio: 10000      // USD/mes del negocio (editable en Config)
+  objetivoNegocio: 30000      // USD/mes del negocio (editable en Config)
 };
 const SUPABASE_URL = "";      // ← URL del proyecto Supabase (vacío = modo local en este navegador)
 const SUPABASE_ANON_KEY = ""; // ← anon / publishable key (NUNCA la service_role)
@@ -234,7 +234,7 @@ function render(){
   $$(".view").forEach(v=>v.classList.toggle("hidden", v.id!=="view-"+VIEW));
   $("#n-movs").textContent = movsMes(MONTH).length || "";
   $("#n-cobros").textContent = STATE.clientes.filter(c=>c.tipo!=="consultoria" && clientePendiente(c)>0.5).length || "";
-  $("#capture").classList.toggle("hidden", VIEW==="config");
+  const capEl=$("#capture"); if(capEl) capEl.classList.toggle("hidden", VIEW==="config");
   $("#n-cuotas").textContent = cuotasPendientes().filter(x=>x.q.fecha && x.q.fecha<=todayStr()).length || "";
   ({mando:renderMando, movs:renderMovs, growth:renderGrowth, consultoria:renderConsultoria, cuotas:renderCuotas, recurrentes:renderRecurrentes, config:renderConfig})[VIEW]();
 }
@@ -458,7 +458,7 @@ function renderMovs(){
     <button class="btn sm ghost" onclick="openTransfer()">⇄ Transferencia</button>
   </div>
   <div class="mini" style="display:flex;gap:18px;flex-wrap:wrap"><span>${list.length} movimientos</span><span>entró <b class="ember">${fmt(sumI)}</b></span><span>salió <b class="bad">${fmt(sumG)}</b></span><span>neto <b>${fmt(sumI-sumG)}</b></span></div>
-  ${!list.length ? `<div class="empty"><div class="g">NADA POR ACÁ</div>Escribí arriba algo como <span class="mono">-12 café #comida @efectivo p</span> y Enter.</div>` : f.vista==="tabla" ? renderTabla(list) : renderFeed(list)}`;
+  ${!list.length ? `<div class="empty"><div class="g">NADA POR ACÁ</div>Usá los botones de arriba para registrar un cobro o un gasto.</div>` : f.vista==="tabla" ? renderTabla(list) : renderFeed(list)}`;
   $("#f-rango").onchange=e=>{f.rango=e.target.value;render();};
   $("#f-tipo").onchange=e=>{f.tipo=e.target.value;render();};
   $("#f-cat").onchange=e=>{f.categoria=e.target.value;render();};
@@ -855,15 +855,17 @@ window.addEventListener("DOMContentLoaded", async()=>{
   $("#m-prev").onclick=()=>{MONTH=addMonths(MONTH,-1);render();};
   $("#m-next").onclick=()=>{MONTH=addMonths(MONTH,1);render();};
   $("#m-close").onclick=closeModal; $("#modal-bg").addEventListener("click",e=>{ if(e.target.id==="modal-bg") closeModal(); });
-  const cap=$("#cap"); cap.addEventListener("input",capturePreview); cap.addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault();captureSubmit();} if(e.key==="Escape"){cap.value="";capturePreview();cap.blur();} });
-  cap.addEventListener("blur",()=>setTimeout(()=>{ if(document.activeElement!==cap) $("#cap-preview").classList.add("hidden"); },150)); cap.addEventListener("focus",capturePreview);
-  $("#cap-form").onclick=()=>{ const p=parseCapture(cap.value); openMov(null, p?{tipo:p.tipo,monto:p.monto,categoria:p.categoria,cuenta:p.cuenta,concepto:p.concepto,ambito:p.ambito,fecha:p.fecha,cliente:p.cliente}:{}); };
-  document.addEventListener("keydown",e=>{ if(e.key==="/" && !["INPUT","TEXTAREA","SELECT"].includes(document.activeElement.tagName)){ e.preventDefault(); cap.focus(); } if(e.key==="Escape" && $("#modal-bg").classList.contains("open")) closeModal(); });
+  const cap=$("#cap");
+  if(cap){ cap.addEventListener("input",capturePreview); cap.addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault();captureSubmit();} if(e.key==="Escape"){cap.value="";capturePreview();cap.blur();} });
+    cap.addEventListener("blur",()=>setTimeout(()=>{ if(document.activeElement!==cap) $("#cap-preview").classList.add("hidden"); },150)); cap.addEventListener("focus",capturePreview);
+    $("#cap-form").onclick=()=>{ const p=parseCapture(cap.value); openMov(null, p?{tipo:p.tipo,monto:p.monto,categoria:p.categoria,cuenta:p.cuenta,concepto:p.concepto,ambito:p.ambito,fecha:p.fecha,cliente:p.cliente}:{}); }; }
+  document.addEventListener("keydown",e=>{ if(e.key==="/" && cap && !["INPUT","TEXTAREA","SELECT"].includes(document.activeElement.tagName)){ e.preventDefault(); cap.focus(); } if(e.key==="Escape" && $("#modal-bg").classList.contains("open")) closeModal(); });
   let rt, lastW=0; const redraw=()=>{ clearTimeout(rt); rt=setTimeout(()=>{ const w=$("#skyline-wrap"); if(VIEW==="mando" && w && w.clientWidth!==lastW){ lastW=w.clientWidth; drawSkyline(); } },120); };
   window.addEventListener("resize",redraw);
   if(window.ResizeObserver) new ResizeObserver(redraw).observe(document.querySelector(".shell"));
   if(sb){ setDb(false); await loadCloud(); subscribeCloud(); } else { loadLocal(); setDb(false); }
   if(!STATE.cobros) STATE.cobros=[];
+  if(Number(STATE.config.objetivoNegocio)===10000 && !STATE.config.obj30){ STATE.config.objetivoNegocio=30000; STATE.config.obj30=true; await saveState("config"); }
   await seedClientesReales();
   render();
   syncAllExt();
