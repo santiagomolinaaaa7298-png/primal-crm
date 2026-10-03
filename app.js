@@ -181,10 +181,14 @@ function clienteDevengado(cl, ym){ if(cl.tipo==="consultoria") return clienteBru
 function clientePendiente(cl){ return Math.max(0, clienteDevengado(cl)-clienteCobrado(cl)); }
 function cobrosPendientes(){ return (STATE.cobros||[]).filter(c=>!c.pagado).map(c=>({c, cl:STATE.clientes.find(x=>x.id===c.clienteId)})).filter(x=>x.cl).sort((a,b)=>(a.c.fecha||"").localeCompare(b.c.fecha||"")); }
 function pctCliente(cl){ return cl.tipo==="consultoria" ? 100 : (Number(cl.pct)||0); }
+const LINK_NYLO = {url:"https://iykadhzbeqozkfwjayot.supabase.co", key:"sb_publishable_l7Cn0fKpfC93XIzu_78FBw_8z5VdSEi", tabla:"pagos", campoMonto:"usd", campoFecha:"fecha", desde:""};
 async function seedClientesReales(){
+  // migración: Tony → NYLO (mismo cliente, mismo %), con su CRM vinculado
+  const tony=STATE.clientes.find(c=>!c.demo && c.nombre==="Tony");
+  if(tony && !STATE.clientes.some(c=>c.nombre==="NYLO")){ tony.nombre="NYLO"; if(!tony.link) tony.link=Object.assign({},LINK_NYLO); MOVS.forEach(m=>{ if(m.cliente==="Tony") m.cliente="NYLO"; }); await saveState("clientes"); saveLocal(); }
   if(STATE.config.seedClientes) return;
   if(!STATE.clientes.some(c=>!c.demo)){
-    [["Estiven","Growth partner",25],["Amelia","Growth partner",12.5],["Tony","Growth partner",27.5]].forEach(([n,sv,p])=>STATE.clientes.push({id:uid(),nombre:n,servicio:sv,tipo:"growth",pct:p,total:0,estado:"activo",cuenta:"",notas:"",cuotas:[],telefono:"",email:"",link:null}));
+    [["Estiven","Growth partner",25,null],["Amelia","Growth partner",12.5,null],["NYLO","Growth partner",27.5,Object.assign({},LINK_NYLO)]].forEach(([n,sv,p,l])=>STATE.clientes.push({id:uid(),nombre:n,servicio:sv,tipo:"growth",pct:p,total:0,estado:"activo",cuenta:"",notas:"",cuotas:[],telefono:"",email:"",link:l}));
     await saveState("clientes");
   }
   STATE.config.seedClientes=true; await saveState("config");
