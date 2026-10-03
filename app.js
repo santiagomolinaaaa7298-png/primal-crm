@@ -204,12 +204,13 @@ async function seedClientesReales(){
     STATE.config.seedDiego=true; await saveState("clientes"); await saveState("config"); saveLocal();
   }
   const dg=STATE.clientes.find(c=>c.id==="cli-diego"); if(dg && (dg.cuotas||[]).length===1){ dg.total=1500; dg.cierre="2026-10-02"; dg.medio="Transferencia"; dg.tipoCuota="Otro"; dg.cuotas=[{id:"cuota-diego-1",label:"Pago 1",monto:1150,fecha:"",pagada:true,pagadaEl:"",previo:true,medio:"",comprobante:"",movId:""},Object.assign(dg.cuotas[0],{label:"Pago 2",medio:"Transferencia"})]; const mv=MOVS.find(m=>m.id==="mov-diego-1"); if(mv){ mv.concepto="Diego Ospino · Pago 2 (310 EUR)"; if(sb) await updMov(mv.id,{concepto:mv.concepto}); } await saveState("clientes"); saveLocal(); }
-  if(STATE.config.seedClientes) return;
-  if(!STATE.clientes.some(c=>!c.demo)){
-    [["Estiven","Growth partner",25,null],["Amelia","Growth partner",12.5,null],["NYLO","Growth partner",27.5,Object.assign({},LINK_NYLO)]].forEach(([n,sv,p,l])=>STATE.clientes.push({id:uid(),nombre:n,servicio:sv,tipo:"growth",pct:p,total:0,estado:"activo",cuenta:"",notas:"",cuotas:[],telefono:"",email:"",link:l}));
-    await saveState("clientes");
-  }
-  STATE.config.seedClientes=true; await saveState("config");
+  // clientes growth fijos: siempre presentes (se crean si faltan, nunca se duplican)
+  let added=false;
+  [["Estiven","Growth partner",25,null],["Amelia","Growth partner",12.5,null],["NYLO","Growth partner",27.5,Object.assign({},LINK_NYLO)]].forEach(([n,sv,p,l])=>{
+    if(!STATE.clientes.some(c=>!c.demo && (c.nombre||"").trim().toLowerCase()===n.toLowerCase())){ STATE.clientes.push({id:uid(),nombre:n,servicio:sv,tipo:"growth",pct:p,total:0,estado:"activo",cuenta:"",notas:"",cuotas:[],telefono:"",email:"",link:l}); added=true; }
+  });
+  if(added){ await saveState("clientes"); saveLocal(); }
+  if(!STATE.config.seedClientes){ STATE.config.seedClientes=true; await saveState("config"); }
 }
 function cuotasPendientes(){
   const out=[]; STATE.clientes.forEach(cl=>(cl.cuotas||[]).forEach(q=>{ if(!q.pagada) out.push({cl,q}); }));
@@ -908,7 +909,7 @@ async function syncExt(cl){
 }
 async function syncAllExt(){ for(const cl of STATE.clientes){ if(cl.link&&cl.link.url) await syncExt(cl); } }
 function extBadge(cl){
-  if(!cl.link||!cl.link.url) return `<span class="tag">sin CRM vinculado</span>`;
+  if(!cl.link||!cl.link.url) return `<span class="tag warn">CRM por agregar</span>`;
   const e=EXT[cl.id]; if(!e) return `<span class="tag warn">conectando…</span>`;
   if(e.error) return `<span class="tag warn" title="${esc(e.error)}">CRM sin conexión</span>`;
   return `<span class="tag ok">● CRM en vivo · ${e.rows.length} pagos</span>`;
@@ -929,7 +930,7 @@ function clientCard(c){
     <div class="nums"><div><div class="l">Cash collected</div><div class="v">${fmt(b)}</div></div><div><div class="l">Mi parte</div><div class="v ember">${fmt(d)}</div></div><div><div class="l">${pz>0.5?"Pendiente":"Cobrado"}</div><div class="v ${pz>0.5?"bad":"dim"}">${fmt(pz>0.5?pz:k)}</div></div></div>
     <div class="prog"><i class="${pct>=99.5?"full":""}" style="width:${pct}%"></i></div>
     <div class="next"><span>${monthLabel(MONTH).split(" ")[0]}: <b>${fmt(mes)}</b></span><b>${pct.toFixed(0)}% cobrado</b></div>
-    <div style="display:flex;gap:6px;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap">${extBadge(c)}<button class="btn xs ${c.link&&c.link.url?"ghost":"gold"}" onclick="event.stopPropagation();openLink('${c.id}')">${c.link&&c.link.url?"Editar vínculo":"Vincular CRM"}</button></div></div>`;
+    <div style="display:flex;gap:6px;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap">${extBadge(c)}<button class="btn xs ${c.link&&c.link.url?"ghost":"gold"}" onclick="event.stopPropagation();openLink('${c.id}')">${c.link&&c.link.url?"Editar vínculo":"Agregar CRM"}</button></div></div>`;
 }
 function renderGrowth(){
   const el=$("#view-growth"); const cls=STATE.clientes.filter(c=>c.tipo!=="consultoria");
