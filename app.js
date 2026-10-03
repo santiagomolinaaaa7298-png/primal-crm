@@ -187,6 +187,14 @@ async function seedClientesReales(){
   const tony=STATE.clientes.find(c=>!c.demo && c.nombre==="Tony");
   if(tony && !STATE.clientes.some(c=>c.nombre==="NYLO")){ tony.nombre="NYLO"; if(!tony.link) tony.link=Object.assign({},LINK_NYLO); MOVS.forEach(m=>{ if(m.cliente==="Tony") m.cliente="NYLO"; }); await saveState("clientes"); saveLocal(); }
   const ny=STATE.clientes.find(c=>!c.demo && c.nombre==="NYLO" && c.link && !c.link.desde); if(ny){ ny.link.desde=LINK_NYLO.desde; await saveState("clientes"); }
+  // registros reales iniciales (se cargan una sola vez por dispositivo hasta que Primal tenga Supabase)
+  if(!STATE.config.seedDiego && !STATE.clientes.some(c=>c.nombre==="Diego Ospino") && !MOVS.some(m=>m.concepto==="Diego Ospino · Pago 1 (310 EUR)")){
+    const cu={id:"cuota-diego-1",label:"Pago 1",monto:350,fecha:"2026-10-02",pagada:true,pagadaEl:"2026-10-02",medio:"",comprobante:"https://drive.google.com/file/d/1v2EzsrepHHLc2ZL455Q6Kd61GscxEO4K/view?usp=sharing",movId:"mov-diego-1"};
+    STATE.clientes.push({id:"cli-diego",nombre:"Diego Ospino",servicio:"Consultoría",tipo:"consultoria",pct:100,total:350,estado:"activo",cuenta:"",notas:"Primer pago de consultoría de Primal. 310 EUR ≈ 350 USD.",telefono:"+34 647 85 56 80",email:"kryptoneerbusiness@gmail.com",tipoCuota:"Pago único",medio:"",link:null,cuotas:[cu]});
+    MOVS.unshift({id:"mov-diego-1",fecha:"2026-10-02",ambito:"negocio",tipo:"ingreso",monto:350,moneda:"USD",cuenta:"",cuenta_destino:"",categoria:"Consultoría",concepto:"Diego Ospino · Pago 1 (310 EUR)",cliente:"Diego Ospino",notas:"310 EUR convertidos a 350 USD. Comprobante en Drive (Comprobantes octubre).",demo:false,created_at:new Date().toISOString()});
+    if(sb){ await sb.from("pg_movimientos").upsert(MOVS[0]); } 
+    STATE.config.seedDiego=true; await saveState("clientes"); await saveState("config"); saveLocal();
+  }
   if(STATE.config.seedClientes) return;
   if(!STATE.clientes.some(c=>!c.demo)){
     [["Estiven","Growth partner",25,null],["Amelia","Growth partner",12.5,null],["NYLO","Growth partner",27.5,Object.assign({},LINK_NYLO)]].forEach(([n,sv,p,l])=>STATE.clientes.push({id:uid(),nombre:n,servicio:sv,tipo:"growth",pct:p,total:0,estado:"activo",cuenta:"",notas:"",cuotas:[],telefono:"",email:"",link:l}));
