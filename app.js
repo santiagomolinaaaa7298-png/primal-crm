@@ -52,7 +52,8 @@ function defaultState(){
     cobros: [],       // cash collected: [{id,fecha,clienteId,bruto,pct,mio,concepto,pagado,movId,demo}]
     recurrentes: [],  // [{id,nombre,monto,dia,cuenta,ambito,categoria,activo,demo}]
     proyectos: [],    // [{id,nombre,cliente,tipo,evento,hora,notas,archivado}] — ver tareas.js
-    tareas: []        // [{id,proyecto,etapa,area,titulo,detalle,resp,prio,off,fecha,estado,link,notas,hechaEl}]
+    tareas: [],       // [{id,proyecto,etapa,area,titulo,detalle,resp,prio,off,fecha,estado,link,notas,hechaEl}]
+    norte: null       // {gastos,eurUsd,fuentes:[...],webinars:[...]} — ver norte.js
   };
 }
 
@@ -240,7 +241,7 @@ function render(){
   const capEl=$("#capture"); if(capEl) capEl.classList.toggle("hidden", VIEW==="config");
   $("#n-cuotas").textContent = cuotasPendientes().filter(x=>x.q.fecha && x.q.fecha<=todayStr()).length || "";
   $("#n-tareas").textContent = tareasVencidasHoy() || "";
-  ({mando:renderMando, tareas:renderTareas, movs:renderMovs, growth:renderGrowth, consultoria:renderConsultoria, cuotas:renderCuotas, recurrentes:renderRecurrentes, config:renderConfig})[VIEW]();
+  ({mando:renderMando, norte:renderNorte, tareas:renderTareas, movs:renderMovs, growth:renderGrowth, consultoria:renderConsultoria, cuotas:renderCuotas, recurrentes:renderRecurrentes, config:renderConfig})[VIEW]();
 }
 
 /* ============================================================
@@ -864,7 +865,7 @@ async function clearDemo(){
    ============================================================ */
 window.addEventListener("DOMContentLoaded", async()=>{
   $$("#scope-seg button").forEach(b=>b.onclick=()=>{SCOPE=b.dataset.scope;render();});
-  $$("#views button").forEach(b=>b.onclick=()=>{VIEW=b.dataset.view;history.replaceState(null,"",VIEW==="tareas"?"#tareas":location.pathname);render();window.scrollTo({top:0});});
+  $$("#views button").forEach(b=>b.onclick=()=>{VIEW=b.dataset.view;history.replaceState(null,"",VIEW==="tareas"||VIEW==="norte"?"#"+VIEW:location.pathname);render();window.scrollTo({top:0});});
   $("#m-prev").onclick=()=>{MONTH=addMonths(MONTH,-1);render();};
   $("#m-next").onclick=()=>{MONTH=addMonths(MONTH,1);render();};
   $("#m-close").onclick=closeModal; $("#modal-bg").addEventListener("click",e=>{ if(e.target.id==="modal-bg") closeModal(); });
@@ -882,6 +883,7 @@ window.addEventListener("DOMContentLoaded", async()=>{
   await seedClientesReales();
   await seedTareas();
   if(location.hash==="#tareas") VIEW="tareas";
+  if(location.hash==="#norte") VIEW="norte";
   render();
   syncAllExt();
 });

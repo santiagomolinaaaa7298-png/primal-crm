@@ -41,6 +41,7 @@
 
   <nav class="views" id="views">
     <button data-view="mando" class="active">Mando</button>
+    <button data-view="norte">Norte</button>
     <button data-view="tareas">Tareas <span class="n" id="n-tareas"></span></button>
     <button data-view="movs">Caja <span class="n" id="n-movs"></span></button>
     <button data-view="growth">Growth <span class="n" id="n-cobros"></span></button>
@@ -52,6 +53,7 @@
 
   <!-- ===== VISTAS ===== -->
   <main id="view-mando" class="view"></main>
+  <main id="view-norte" class="view hidden"></main>
   <main id="view-tareas" class="view hidden"></main>
   <main id="view-movs" class="view hidden"></main>
   <main id="view-growth" class="view hidden"></main>
@@ -75,6 +77,7 @@
 <script src="app.js"></script>
 <script src="tareas-data.js"></script>
 <script src="tareas.js"></script>
+<script src="norte.js"></script>
 <script>if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});</script>
 </body>
 </html>
