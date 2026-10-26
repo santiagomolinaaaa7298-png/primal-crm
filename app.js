@@ -11,8 +11,8 @@ const BRAND = {
   objetivoPersonal: 3000,     // USD/mes que querés ganar vos (editable en Config)
   objetivoNegocio: 30000      // USD/mes del negocio (editable en Config)
 };
-const SUPABASE_URL = "";      // ← URL del proyecto Supabase (vacío = modo local en este navegador)
-const SUPABASE_ANON_KEY = ""; // ← anon / publishable key (NUNCA la service_role)
+const SUPABASE_URL = "https://tgpgpbmuoenqaxhfntrf.supabase.co";      // ← proyecto Supabase de Primal (organización Primal Growth, plan Free). Vacío = modo local
+const SUPABASE_ANON_KEY = "sb_publishable_983iV0RUWElpGAKP8z4vUw_PRk0Uqgb"; // ← publishable key (NUNCA la service_role)
 /* ------------------------------------------------------------------ >>> */
 
 const sb = (SUPABASE_URL && window.supabase) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
