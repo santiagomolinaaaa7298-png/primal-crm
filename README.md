@@ -12,6 +12,9 @@ CRM de finanzas personales + del negocio en un solo lugar. Misma arquitectura qu
 - **Consultoría**: formato tabla, 100% tuyo. En el formulario del cliente escribís Revenue (contrato) y Cash collected (lo que entró); si subís el cash collected, el pago se registra solo en Caja y como cuota pagada. Nombre, teléfono (abre WhatsApp), email, revenue, cash collected, tipo de cuota, próxima cuota, medio de pago, comprobante y estado.
 - **Cuotas**: todas las cuotas de todos los clientes (pendientes / pagadas / vencidas), con botón cobrar, medio de pago y comprobante (link o archivo hasta 1 MB).
 - **Toda la empresa** (al final de Mando): cash collected de clientes, ingresos devengados por fuente (growth + closing + consultoría + otros), cobrado real, gastos del negocio, margen, ranking por cliente y tabla mes a mes.
+- **Tareas** (26 oct 2026): todo lo que hay que tener listo y para cuándo, por proyecto (webinar de Sebas, mega webinar orgánico de Amelia, webinar de Estiven, Primal). Cada proyecto tiene la fecha de su evento y cada tarea vence N días antes (−) o después (+): si el evento se mueve, se mueven todas (ingeniería inversa del calendario). Pendiente / En progreso / Trabada / Hecho, prioridad P0-P1-P2 (como la planilla de Naza), responsable, entregable y notas. Vista por fecha (vencidas, hoy, mañana, esta semana…) o por etapa. Al crear un proyecto se puede arrancar con la checklist de su tipo (webinar pago u orgánico). En Mando aparece una franja con lo vencido y lo de hoy. La carga inicial está en `tareas-data.js` (se aplica una vez por versión, no pisa lo editado).
+- **Avisos al celular**: por [ntfy](https://ntfy.sh) (app gratis, sin cuenta). Tareas → Avisos al celular: canal privado, botón de prueba y vista previa. Un mensaje por grupo: vencidas, hoy, mañana, 3 y 7 días antes. Con Supabase salen solos a las 7:00 (todo) y a las 19:00 (solo lo que sigue abierto hoy o vencido), hora de Costa Rica, por `pg_cron` + `pg_net` (función `primal_avisos()` en el schema); en modo local se mandan a mano con "Mandar los de hoy".
+- **App en el celular**: `manifest.webmanifest` + `sw.js` + iconos. Desde Safari/Chrome → Compartir → "Agregar a inicio" y abre directo en Tareas.
 - **Recurrentes**: cargos fijos (alquiler, herramientas, salarios…). "Registrar" crea el gasto del mes con un clic.
 - **Config**: wordmark, objetivos mensuales, tipo de cambio CRC, cuentas, categorías, export/import JSON, datos de ejemplo, reset.
 
@@ -27,7 +30,7 @@ CRM de finanzas personales + del negocio en un solo lugar. Misma arquitectura qu
 - Fijos = categorías Vivienda, Suscripciones, Servicios, Herramientas, Equipo, Salarios, Seguro, Deuda. Ahorro e Inversión salen de caja pero se muestran aparte.
 
 ## Deploy (10 minutos)
-1. **Supabase** → New project → SQL Editor → pegar `supabase_schema.sql` → Run.
+1. **Supabase** → New project → SQL Editor → pegar `supabase_schema.sql` → Run. (Crea también la función de avisos y el cron diario: necesita las extensiones pg_cron y pg_net, que el script activa.)
 2. Project Settings → API → copiar **Project URL** y **anon/publishable key** (nunca la service_role).
 3. Pegarlas en `app.js`, bloque `<<< PERSONALIZAR ACÁ` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`).
 4. GitHub → repo privado con esta carpeta → Vercel → Add New → Project → preset **Other** → Deploy.
@@ -36,6 +39,8 @@ Sin credenciales todo funciona en modo local (localStorage del navegador). Para 
 
 ## Archivos
 - `index.html` · `styles.css` · `app.js` — la app.
-- `supabase_schema.sql` — 2 tablas: `pg_movimientos` y `pg_state`.
+- `tareas.js` · `tareas-data.js` — vista Tareas, avisos y carga inicial de tareas.
+- `manifest.webmanifest` · `sw.js` · `icon-192.png` · `icon-512.png` — instalarla como app.
+- `supabase_schema.sql` — 2 tablas (`pg_movimientos` y `pg_state`) + avisos (`primal_avisos()` y el cron `primal-avisos`).
 - `vercel.json` — config de deploy.
 - `assets/` — referencias de marca (logo gorila anterior, captura del perfil de IG).

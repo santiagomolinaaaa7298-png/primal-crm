@@ -11,8 +11,8 @@ const BRAND = {
   objetivoPersonal: 3000,     // USD/mes que querés ganar vos (editable en Config)
   objetivoNegocio: 30000      // USD/mes del negocio (editable en Config)
 };
-const SUPABASE_URL = "";      // ← URL del proyecto Supabase (vacío = modo local en este navegador)
-const SUPABASE_ANON_KEY = ""; // ← anon / publishable key (NUNCA la service_role)
+const SUPABASE_URL = "https://tgpgpbmuoenqaxhfntrf.supabase.co";      // ← proyecto Supabase de Primal (organización Primal Growth, plan Free). Vacío = modo local
+const SUPABASE_ANON_KEY = "sb_publishable_983iV0RUWElpGAKP8z4vUw_PRk0Uqgb"; // ← publishable key (NUNCA la service_role)
 /* ------------------------------------------------------------------ >>> */
 
 const sb = (SUPABASE_URL && window.supabase) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
@@ -50,7 +50,10 @@ function defaultState(){
     cuentas: [],      // [{id,nombre,tipo,moneda,inicial,ambito,demo}]
     clientes: [],     // [{id,nombre,servicio,tipo:'growth'|'closing'|'consultoria',pct,total,estado,cuenta,notas,cuotas:[...],demo}]
     cobros: [],       // cash collected: [{id,fecha,clienteId,bruto,pct,mio,concepto,pagado,movId,demo}]
-    recurrentes: []   // [{id,nombre,monto,dia,cuenta,ambito,categoria,activo,demo}]
+    recurrentes: [],  // [{id,nombre,monto,dia,cuenta,ambito,categoria,activo,demo}]
+    proyectos: [],    // [{id,nombre,cliente,tipo,evento,hora,notas,archivado}] — ver tareas.js
+    tareas: [],       // [{id,proyecto,etapa,area,titulo,detalle,resp,prio,off,fecha,estado,link,notas,hechaEl}]
+    norte: null       // {gastos,eurUsd,fuentes:[...],webinars:[...]} — ver norte.js
   };
 }
 
@@ -237,7 +240,8 @@ function render(){
   $("#n-cobros").textContent = STATE.clientes.filter(c=>c.tipo!=="consultoria" && clientePendiente(c)>0.5).length || "";
   const capEl=$("#capture"); if(capEl) capEl.classList.toggle("hidden", VIEW==="config");
   $("#n-cuotas").textContent = cuotasPendientes().filter(x=>x.q.fecha && x.q.fecha<=todayStr()).length || "";
-  ({mando:renderMando, movs:renderMovs, growth:renderGrowth, consultoria:renderConsultoria, cuotas:renderCuotas, recurrentes:renderRecurrentes, config:renderConfig})[VIEW]();
+  $("#n-tareas").textContent = tareasVencidasHoy() || "";
+  ({mando:renderMando, norte:renderNorte, tareas:renderTareas, movs:renderMovs, growth:renderGrowth, consultoria:renderConsultoria, cuotas:renderCuotas, recurrentes:renderRecurrentes, config:renderConfig})[VIEW]();
 }
 
 /* ============================================================
@@ -287,6 +291,7 @@ function renderMando(){
     </div>
   </section>
   <div class="horizon"></div>
+  ${renderTareasStrip()}
   ${!hasData ? `<div class="empty"><div class="g">BASE VACÍA</div>Cargá tu primer movimiento arriba, creá tus cuentas en Config, o mirá cómo se ve con datos de ejemplo.<br><button class="btn" onclick="loadDemo()">Ver con datos de ejemplo</button></div>` : ""}
   <section class="grid g-32">
     <div class="panel">
@@ -860,7 +865,7 @@ async function clearDemo(){
    ============================================================ */
 window.addEventListener("DOMContentLoaded", async()=>{
   $$("#scope-seg button").forEach(b=>b.onclick=()=>{SCOPE=b.dataset.scope;render();});
-  $$("#views button").forEach(b=>b.onclick=()=>{VIEW=b.dataset.view;render();window.scrollTo({top:0});});
+  $$("#views button").forEach(b=>b.onclick=()=>{VIEW=b.dataset.view;history.replaceState(null,"",VIEW==="tareas"||VIEW==="norte"?"#"+VIEW:location.pathname);render();window.scrollTo({top:0});});
   $("#m-prev").onclick=()=>{MONTH=addMonths(MONTH,-1);render();};
   $("#m-next").onclick=()=>{MONTH=addMonths(MONTH,1);render();};
   $("#m-close").onclick=closeModal; $("#modal-bg").addEventListener("click",e=>{ if(e.target.id==="modal-bg") closeModal(); });
@@ -876,6 +881,9 @@ window.addEventListener("DOMContentLoaded", async()=>{
   if(!STATE.cobros) STATE.cobros=[];
   if(Number(STATE.config.objetivoNegocio)===10000 && !STATE.config.obj30){ STATE.config.objetivoNegocio=30000; STATE.config.obj30=true; await saveState("config"); }
   await seedClientesReales();
+  await seedTareas();
+  if(location.hash==="#tareas") VIEW="tareas";
+  if(location.hash==="#norte") VIEW="norte";
   render();
   syncAllExt();
 });
