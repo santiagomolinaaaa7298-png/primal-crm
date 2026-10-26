@@ -209,10 +209,12 @@ async function seedClientesReales(){
   const dg=STATE.clientes.find(c=>c.id==="cli-diego"); if(dg && (dg.cuotas||[]).length===1){ dg.total=1500; dg.cierre="2026-10-02"; dg.medio="Transferencia"; dg.tipoCuota="Otro"; dg.cuotas=[{id:"cuota-diego-1",label:"Pago 1",monto:1150,fecha:"",pagada:true,pagadaEl:"",previo:true,medio:"",comprobante:"",movId:""},Object.assign(dg.cuotas[0],{label:"Pago 2",medio:"Transferencia"})]; const mv=MOVS.find(m=>m.id==="mov-diego-1"); if(mv){ mv.concepto="Diego Ospino · Pago 2 (310 EUR)"; if(sb) await updMov(mv.id,{concepto:mv.concepto}); } await saveState("clientes"); saveLocal(); }
   // clientes growth fijos: siempre presentes (se crean si faltan, nunca se duplican)
   let added=false;
-  [["Estiven","Growth partner",25,null],["Amelia","Growth partner",12.5,null],["NYLO","Growth partner",27.5,Object.assign({},LINK_NYLO)]].forEach(([n,sv,p,l])=>{
+  [["Estiven","Growth partner",25,null],["Amelia","Growth partner",10,null],["NYLO","Growth partner",27.5,Object.assign({},LINK_NYLO)]].forEach(([n,sv,p,l])=>{
     if(!STATE.clientes.some(c=>!c.demo && (c.nombre||"").trim().toLowerCase()===n.toLowerCase())){ STATE.clientes.push({id:uid(),nombre:n,servicio:sv,tipo:"growth",pct:p,total:0,estado:"activo",cuenta:"",notas:"",cuotas:[],telefono:"",email:"",link:l}); added=true; }
   });
   if(added){ await saveState("clientes"); saveLocal(); }
+  // 26/10/2026: Santiago confirma que con Amelia es el 10 % (antes 12,5)
+  if(!STATE.config.pctAmelia10){ const am=STATE.clientes.find(c=>!c.demo && (c.nombre||"").trim().toLowerCase()==="amelia"); if(am && Number(am.pct)===12.5){ am.pct=10; await saveState("clientes"); } STATE.config.pctAmelia10=true; await saveState("config"); saveLocal(); }
   if(!STATE.config.seedClientes){ STATE.config.seedClientes=true; await saveState("config"); }
 }
 function cuotasPendientes(){

@@ -45,16 +45,14 @@ let N_SEL = "";
 
 function nSeed(){
   const esc = over => { const o={}; Object.keys(N_ESC).forEach(k=>o[k]=Object.assign({}, N_REF[k], over||{})); return o; };
-  const cli = n => (STATE.clientes||[]).find(c=>!c.demo && (c.nombre||"").toLowerCase()===n.toLowerCase());
   return {
-    version: 1,
+    version: 2,
     gastos: "",            // gastos fijos de Primal por mes (USD)
     eurUsd: 1.10,          // tipo de cambio para las fuentes en euros (revisar)
     fuentes: [
       {id:"f-sebas",   nombre:"Sebas Ramos",  base:"profit", pct:50,   costos:.40, deja:"", moneda:"USD"},
-      {id:"f-estiven", nombre:"Estiven López", base:"cash",  pct:(cli("Estiven")||{}).pct||25, deja:"", moneda:"USD"},
-      {id:"f-amelia",  nombre:"Amelia Campos", base:"cash",  pct:(cli("Amelia")||{}).pct||12.5, deja:"", moneda:"EUR"},
-      {id:"f-nylo",    nombre:"NYLO",          base:"cash",  pct:(cli("NYLO")||{}).pct||27.5, deja:"", moneda:"USD"},
+      {id:"f-estiven", nombre:"Estiven López", base:"cash",  pct:25, deja:"", moneda:"USD"},
+      {id:"f-amelia",  nombre:"Amelia Campos", base:"cash",  pct:10, deja:"", moneda:"EUR"},
       {id:"f-consul",  nombre:"Consultoría",   base:"cash",  pct:100,  deja:"", moneda:"USD"}
     ],
     webinars: [
@@ -64,7 +62,15 @@ function nSeed(){
     ]
   };
 }
-function N(){ if(!STATE.norte || !STATE.norte.version){ STATE.norte = nSeed(); saveState("norte"); } return STATE.norte; }
+function N(){
+  if(!STATE.norte || !STATE.norte.version){ STATE.norte = nSeed(); saveState("norte"); }
+  if(STATE.norte.version<2){ // 26/10/2026: NYLO sale del plan; Amelia al 10 %
+    STATE.norte.fuentes = STATE.norte.fuentes.filter(f=>f.id!=="f-nylo");
+    const a=STATE.norte.fuentes.find(f=>f.id==="f-amelia"); if(a) a.pct=10;
+    STATE.norte.version=2; saveState("norte");
+  }
+  return STATE.norte;
+}
 function nNum(v){ return v===""||v==null||isNaN(Number(v)) ? null : Number(v); }
 function nOk(...xs){ return xs.every(x=>x!=null && isFinite(x)); }
 function nMoney(n, cur){ if(n==null||!isFinite(n)) return "—"; return cur==="EUR" ? fmt(n).replace("$","")+" €" : fmt(n); }
@@ -165,7 +171,7 @@ function renderNorte(){
       <td class="num"><input class="mono" style="width:100px;text-align:right" type="number" step="100" data-nset="fuente|${f.id}|deja" value="${esc(f.deja)}" placeholder="0" /></td>
       <td class="num ember">${nMoney(cn,f.moneda)}</td></tr>`; }).join("")}
     </tbody></table>
-    <div class="mini" style="margin-top:10px">Con profit, tu % real = tu % × (1 − costos). Euros a ${nNum(n.eurUsd)||1} USD <input class="mono" style="width:60px" type="number" step="0.01" data-nset="eurUsd" value="${esc(n.eurUsd)}" /> · El % de cada growth sale de su ficha en Growth la primera vez; después se edita acá.</div>
+    <div class="mini" style="margin-top:10px">Con profit, tu % real = tu % × (1 − costos). Euros a ${nNum(n.eurUsd)||1} USD <input class="mono" style="width:60px" type="number" step="0.01" data-nset="eurUsd" value="${esc(n.eurUsd)}" /> · Si cambia un % con un cliente, se cambia acá y en su ficha de Growth.</div>
   </section>
 
   <section class="panel"><h3>2 · Ingeniería inversa por webinar <span class="act">${n.webinars.map(x=>`<button class="btn xs ${x.id===N_SEL?"gold":"ghost"}" data-nwsel="${x.id}">${esc(x.nombre.replace(/^(Mega webinar orgánico|Webinar) /,""))}</button>`).join("")}</span></h3>
