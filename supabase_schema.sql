@@ -58,9 +58,9 @@ end $$;
 
 -- ============================================================
 -- AVISOS AL CELULAR (vista Tareas → ntfy)
--- Todos los días a las 7:00 de Costa Rica (13:00 UTC) arma los mensajes con las tareas
--- abiertas: vencidas, las que vencen hoy y las que vencen en 7, 3 y 1 días (config.avisosDias),
--- un mensaje por grupo, y los manda al canal de ntfy de config.ntfy. Mismo armado que avisosHoy() en tareas.js.
+-- Dos veces al día, al canal de ntfy de config.ntfy, un mensaje por grupo (mismo armado que avisosHoy() en tareas.js):
+--   7:00 Costa Rica (13:00 UTC): vencidas, las que vencen hoy y las que vencen en 7, 3 y 1 días (config.avisosDias).
+--   19:00 Costa Rica (01:00 UTC): solo lo que sigue abierto y vence hoy o ya venció.
 -- ============================================================
 create extension if not exists pg_net;
 create extension if not exists pg_cron;
@@ -100,8 +100,8 @@ returns table(orden int, title text, message text, priority int, tags jsonb) lan
   from g order by k;
 $$;
 
--- Manda los avisos de hoy. Devuelve cuántos mandó.
-create or replace function primal_avisos() returns int language plpgsql security definer as $$
+-- Manda los avisos de hoy ('manana' = todo, 'noche' = solo hoy y vencidas). Devuelve cuántos mandó.
+create or replace function primal_avisos(modo text default 'manana') returns int language plpgsql security definer as $$
 declare
   cfg jsonb := coalesce((select data from pg_state where key='config'), '{}'::jsonb);
   topic text := nullif(cfg->>'ntfy','');
@@ -111,21 +111,24 @@ declare
 begin
   if topic is null then return 0; end if;
   for a in select * from primal_avisos_armar(cfg, (select data from pg_state where key='proyectos'), (select data from pg_state where key='tareas'), hoy) loop
+    continue when modo = 'noche' and a.orden > 0;
     perform net.http_post(url := 'https://ntfy.sh',
-      body := jsonb_strip_nulls(jsonb_build_object('topic',topic,'title',a.title,'message',a.message,'priority',a.priority,'tags',a.tags,'click',case when url is not null then url||'#tareas' end)),
+      body := jsonb_strip_nulls(jsonb_build_object('topic',topic,'title',case when modo='noche' then 'Sigue abierto · '||a.title else a.title end,'message',a.message,'priority',a.priority,'tags',a.tags,'click',case when url is not null then url||'#tareas' end)),
       headers := '{"Content-Type":"application/json"}'::jsonb);
     n := n + 1;
   end loop;
-  insert into pg_state(key, data, updated_at) values ('avisos_log', jsonb_build_object('fecha', hoy, 'enviados', n), now())
+  insert into pg_state(key, data, updated_at) values ('avisos_log', jsonb_build_object('fecha', hoy, 'modo', modo, 'enviados', n), now())
     on conflict (key) do update set data = excluded.data, updated_at = now();
   return n;
 end $$;
-revoke execute on function primal_avisos() from public, anon, authenticated;
+revoke execute on function primal_avisos(text) from public, anon, authenticated;
 
--- Todos los días a las 13:00 UTC = 7:00 Costa Rica / 8:00 Colombia.
+-- 13:00 UTC = 7:00 Costa Rica / 8:00 Colombia · 01:00 UTC = 19:00 Costa Rica / 20:00 Colombia.
 do $$ begin
   if exists (select 1 from cron.job where jobname = 'primal-avisos') then perform cron.unschedule('primal-avisos'); end if;
-  perform cron.schedule('primal-avisos', '0 13 * * *', 'select primal_avisos()');
+  if exists (select 1 from cron.job where jobname = 'primal-avisos-noche') then perform cron.unschedule('primal-avisos-noche'); end if;
+  perform cron.schedule('primal-avisos', '0 13 * * *', $c$select primal_avisos('manana')$c$);
+  perform cron.schedule('primal-avisos-noche', '0 1 * * *', $c$select primal_avisos('noche')$c$);
 end $$;
 -- Probar a mano:  select primal_avisos();   Ver lo que mandaría sin mandar:
 -- select * from primal_avisos_armar((select data from pg_state where key='config'), (select data from pg_state where key='proyectos'), (select data from pg_state where key='tareas'), current_date);

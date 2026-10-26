@@ -10,6 +10,7 @@ const T_PRIO = {P0:"Si no está, el lanzamiento se rompe", P1:"Si falta, sale pe
 const T_RESP = ["Santi","Claude","Cliente","Sebas","Amelia","Estiven","Editores","Equipo de ventas"];
 const T_TIPOS = {pago:"Webinar pago", organico:"Webinar orgánico", vsl:"VSL funnel", interno:"Interno"};
 const NTFY = "https://ntfy.sh";
+const NTFY_TOPIC = "primal-santi-a7f08dd811"; // canal por defecto (el que se suscribe en la app ntfy del celular)
 let T_F = {proy:"", resp:"", estado:"abiertas", modo:"fecha"};
 
 function proyectos(){ return STATE.proyectos||[]; }
@@ -28,8 +29,9 @@ function tareasVencidasHoy(){ return tareas().filter(t=>tAbierta(t) && tVence(t)
 /* ---------- carga inicial (una vez por versión del seed) ---------- */
 async function seedTareas(){
   if(!STATE.proyectos) STATE.proyectos=[]; if(!STATE.tareas) STATE.tareas=[];
-  if(!STATE.config.ntfy){ STATE.config.ntfy = "primal-santi-"+uid().replace(/[^a-z0-9]/gi,"").slice(0,10).toLowerCase(); STATE.config.avisosDias=[7,3,1]; await saveState("config"); }
+  if(!STATE.config.ntfy){ STATE.config.ntfy = NTFY_TOPIC; STATE.config.avisosDias=[7,3,1]; await saveState("config"); }
   if(typeof T_SEED==="undefined" || (Number(STATE.config.seedTareas)||0) >= T_SEED.version) return;
+  (T_SEED.quitar||[]).forEach(pid=>{ STATE.proyectos=STATE.proyectos.filter(p=>p.id!==pid); STATE.tareas=STATE.tareas.filter(t=>t.proyecto!==pid); });
   T_SEED.proyectos.forEach(p=>{ if(!STATE.proyectos.some(x=>x.id===p.id)) STATE.proyectos.push(Object.assign({archivado:false}, p)); });
   Object.entries(T_SEED.tareas).forEach(([pid, rows])=>rows.forEach((r,i)=>{
     const id=`${pid}-${i+1}`; if(STATE.tareas.some(x=>x.id===id)) return;
@@ -63,7 +65,7 @@ function renderTareas(){
   </div>
 
   <section class="t-proys">${proyectos().filter(p=>!p.archivado).map(proyCard).join("")}
-    <button class="t-proy add" onclick="openProyecto()"><span>+ Proyecto</span><small>webinar pago, orgánico, VSL funnel o vacío</small></button>
+    <button class="t-proy add" onclick="openProyecto()"><span>+ Proyecto</span><small>webinar pago, orgánico o vacío</small></button>
   </section>
 
   <div class="filters">
@@ -164,7 +166,7 @@ function openTarea(id){
   });
 }
 function plantillaDe(tipo){
-  const src={pago:"sebas-nov", organico:"amelia-dic", vsl:"estiven-vsl"}[tipo]; if(!src||typeof T_SEED==="undefined") return [];
+  const src={pago:"sebas-nov", organico:"amelia-dic"}[tipo]; if(!src||typeof T_SEED==="undefined") return [];
   return (T_SEED.tareas[src]||[]).filter(r=>r[6]!==null).map(r=>{ const [etapa,area,titulo,detalle,resp,prio,off]=r; return {etapa,area,titulo,detalle,resp:["Sebas","Amelia","Estiven"].includes(resp)?"Cliente":resp,prio,off}; });
 }
 function openProyecto(id){
@@ -226,7 +228,7 @@ function openAvisos(){
       <b style="color:var(--ivory)">1.</b> Instala <b>ntfy</b> en el celular (App Store o Google Play, gratis, sin cuenta).<br>
       <b style="color:var(--ivory)">2.</b> En la app: <b>+</b> → Subscribe to topic → pega tu canal de abajo (servidor ntfy.sh).<br>
       <b style="color:var(--ivory)">3.</b> Toca <b>Mandar prueba</b>. Si te llega, listo.<br>
-      ${sb?`<span class="ok">Nube activa:</span> los avisos salen solos todas las mañanas a las 7:00 (hora de Costa Rica) aunque no abras el CRM.`:`<span class="warn">Modo local:</span> todavía no salen solos. Para eso falta la nube (Supabase + Vercel, ver README). Mientras tanto, "Mandar los de hoy" los manda a mano.`}
+      ${sb?`<span class="ok">Nube activa:</span> los avisos salen solos a las 7:00 (todo) y a las 19:00 (lo que sigue abierto hoy o vencido), hora de Costa Rica, aunque no abras el CRM.`:`<span class="warn">Modo local:</span> todavía no salen solos. Para eso falta la nube (Supabase + Vercel, ver README). Mientras tanto, "Mandar los de hoy" los manda a mano.`}
     </div>
     <div class="f"><label>Tu canal (es privado: quien lo sepa te puede escribir)</label><input id="a-topic" class="mono" value="${esc(c.ntfy||"")}" /></div>
     <div class="f"><label>Avisar cuando falten (días)</label><input id="a-dias" class="mono" value="${esc((c.avisosDias||[7,3,1]).join(", "))}" /><small class="dim">Además siempre avisa el mismo día y las vencidas.</small></div>

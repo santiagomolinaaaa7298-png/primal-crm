@@ -4,16 +4,18 @@
    "día vs evento" = cuántos días antes (−) o después (+) del evento. Si se mueve la fecha
    del evento, la tarea se mueve sola. Si es null, manda la fecha fija.
    Se carga una vez por versión (config.seedTareas); lo que edites en la app no se pisa.
+   v2 (26 oct): Estiven ya no hace VSL funnel sino otro webinar; "quitar" borra el proyecto viejo.
    ============================================================ */
 const T_SEED = {
-  version: 1,
+  version: 2,
+  quitar: ["estiven-vsl"],
   proyectos: [
     { id:"sebas-nov", nombre:"Webinar Sebas Ramos", cliente:"Sebas", tipo:"pago", evento:"2026-11-19", hora:"20:00",
       notas:"Webinar desde cero. Jueves 19 nov (el CONTEXTO decía 12: confirmar con Sebas y anotarlo). 10 días de adquisición: ads corriendo desde el lun 9, campaña y edición listas el dom 8, guiones el jue 5, equipo de ventas armado el sáb 7. Acuerdo: 50 % del profit, sin upfront." },
     { id:"amelia-dic", nombre:"Mega webinar orgánico Amelia", cliente:"Amelia", tipo:"organico", evento:"2026-12-10", hora:"19:00",
       notas:"Fecha PROPUESTA (jueves 10 dic): confirmarla con Amelia y moverla acá; todas las fechas se recalculan solas. Orgánico: no cuenta para ads. Primero rearmar el equipo de ventas y el plan de envíos." },
-    { id:"estiven-vsl", nombre:"VSL funnel Estiven", cliente:"Estiven", tipo:"vsl", evento:"2026-11-16", hora:"",
-      notas:"Fecha de salida PROPUESTA (lun 16 nov): confirmarla con Estiven. Funnel siempre encendido: ads → VSL → aplicación → llamada. Antes, ordenar ventas: el 22 oct el triaje llamó 16-19 h tarde a los calificados y el CRM quedó con 0 llamadas y 0 pagos cargados." },
+    { id:"estiven-dic", nombre:"Webinar Estiven", cliente:"Estiven", tipo:"pago", evento:"2026-12-03", hora:"20:00",
+      notas:"Otro webinar (no VSL funnel). Fecha PROPUESTA: jueves 3 dic, 8 p. m. Colombia: confirmarla con Estiven y moverla acá; todo se recalcula. Guiones antes del 15 nov para no chocar con la semana del vivo de Sebas. Lo único de VSL que falta es el VSL de chat (va primero). Antes, ordenar ventas: el 22 oct el triaje llamó 16-19 h tarde a los calificados y el CRM quedó con 0 llamadas y 0 pagos." },
     { id:"primal", nombre:"Primal Growth · mi negocio", cliente:"Primal", tipo:"interno", evento:"", hora:"",
       notas:"Lo tuyo: la meta de 30K de profit al mes, el análisis financiero y los sistemas que te mantienen al día." }
   ],
@@ -120,23 +122,57 @@ const T_SEED = {
       ["4 · Webinar","Funnel","Webinar en vivo","","Amelia","P0",0,null],
       ["4 · Webinar","Ventas","Cerrar la ventana y cargar resultados en Primal","","Santi","P1",7,null]
     ],
-    "estiven-vsl": [
-      ["0 · Ordenar ventas","Ventas","Cargar en el CRM de Estiven las llamadas y pagos reales del 22 oct","Hoy figuran 0 llamadas y 0 pagos: sin eso no se mide show ni cierre, ni tu 25 %.","Santi","P0",null,"2026-10-27"],
-      ["0 · Ordenar ventas","Ventas","Respuesta de Fede sobre la repesca y fecha de la repesca","sistemas/estiven-lopez/AGENDA-REPESCA-PARA-FEDE.md.","Santi","P0",null,"2026-10-28"],
-      ["0 · Ordenar ventas","Estrategia","Fijar con Estiven la fecha de salida del VSL funnel y el presupuesto","Propuesta: lunes 16 nov. Cuando se confirme, mover la fecha del proyecto.","Estiven","P0",null,"2026-10-28"],
-      ["0 · Ordenar ventas","Ventas","Otro número de WhatsApp comprado y calentándose (2 líneas)","Si bajan el principal, se pasa a este sin perder leads.","Santi","P0",null,"2026-10-29"],
-      ["1 · Equipo y sistemas","Ventas","Rearmar el equipo de ventas: qué rol se queda, qué falta","El triaje del 22 llamó tarde a los calificados. Ver SOP de agenda directa v3.","Santi","P0",-14,null],
-      ["1 · Equipo y sistemas","Ventas","Sistema de ventas implementado: Calendly → Gmail → confirmer → closer","SOP-PRE-CALL-AGENDA-DIRECTA v3. Que no sea un caos: un dueño por paso.","Santi","P0",-10,null],
-      ["1 · Equipo y sistemas","Ventas","Guion para los cold callers","","Claude","P0",-7,null],
-      ["1 · Equipo y sistemas","Ventas","Presentación de venta lista (revisar la del Intensivo Fénix)","","Claude","P1",-5,null],
-      ["2 · VSL funnel","Funnel","Guion del VSL largo y del video de la thank you","","Claude","P0",-14,null],
-      ["2 · VSL funnel","Ads","Guiones de 9 anuncios de adquisición al VSL","","Claude","P0",-12,null],
-      ["2 · VSL funnel","Ads","Estiven graba VSL, VSL de chat y anuncios","El VSL de chat nunca se grabó: va en esta tanda.","Estiven","P0",-10,null],
-      ["2 · VSL funnel","Ads","VSL y anuncios editados","","Editores","P0",-6,null],
-      ["2 · VSL funnel","Funnel","Landing del VSL y thank you (meta safe)","","Santi","P0",-5,null],
-      ["2 · VSL funnel","Ads","Ads configurados (cuenta principal y 2 de respaldo calentadas)","Quedan en borrador hasta tu OK.","Santi","P0",-2,null],
-      ["2 · VSL funnel","Ads","Dashboard de ads y métricas de ventas del funnel","","Claude","P1",-1,null],
-      ["2 · VSL funnel","Funnel","Salida del VSL funnel","","Santi","P0",0,null]
+    "estiven-dic": [
+      ["0 · Decisiones","Ventas","Cargar en el CRM de Estiven las llamadas y pagos reales del 22 oct","Hoy figuran 0 llamadas y 0 pagos: sin eso no se mide show ni cierre, ni tu 25 %.","Santi","P0",null,"2026-10-27"],
+      ["0 · Decisiones","Ventas","Respuesta de Fede sobre la repesca y fecha de la repesca","sistemas/estiven-lopez/AGENDA-REPESCA-PARA-FEDE.md.","Santi","P0",null,"2026-10-28"],
+      ["0 · Decisiones","Estrategia","Retro del webinar del 22 oct con números","Qué falló: triaje tarde, 2 emails con el link de Zoom de marcador, solo 3 emails ese día. Una cosa por área que cambia.","Santi","P0",null,"2026-10-30"],
+      ["0 · Decisiones","Estrategia","Fijar con Estiven la fecha del webinar (propuesta: jueves 3 dic) y el presupuesto","Cuando la confirme, cambiar la fecha del proyecto: todo se recalcula.","Estiven","P0",null,"2026-10-30"],
+      ["0 · Decisiones","Estrategia","Ingeniería inversa del webinar: meta de cash → cierres → agendas → registros → presupuesto","En el chat de análisis financiero.","Santi","P0",-28,null],
+      ["0 · Decisiones","Estrategia","Oferta revisada con lo que se vendió el 22","Grupo Fénix, Fénix 10K y Fénix 50K: qué se mantiene.","Santi","P1",-25,null],
+
+      ["1 · Equipo de ventas","Ventas","Rearmar el equipo de ventas: qué rol se queda y qué falta","Closer(s), confirmer, triager de rescates, setter, cold callers y director.","Santi","P0",-24,null],
+      ["1 · Equipo de ventas","Ventas","Búsqueda y selección de los roles que faltan","equipo/MENSAJE-BUSQUEDA-EQUIPO-VENTAS.md.","Santi","P0",-20,null],
+      ["1 · Equipo de ventas","Ventas","Guion para los cold callers","Para llamar a todo lo que se mueva: registrados, gente que escribió, seguidores calientes.","Claude","P0",-16,null],
+      ["1 · Equipo de ventas","Ventas","Equipo de ventas armado y entrenado (onboarding + role play)","","Equipo de ventas","P0",-12,null],
+      ["1 · Equipo de ventas","Ventas","Presentación de venta lista (revisar la del Intensivo Fénix)","","Claude","P1",-7,null],
+      ["1 · Equipo de ventas","Ventas","Accesos de los closers (CRM, agenda, pago, recursos) y daily del vivo","","Santi","P0",-1,null],
+
+      ["2 · Sistemas de venta","Funnel","Guion del VSL de chat","Lo único de VSL que falta: Estiven nunca lo grabó. Va en el pre-call.","Claude","P0",null,"2026-10-29"],
+      ["2 · Sistemas de venta","Funnel","Estiven graba el VSL de chat","","Estiven","P0",null,"2026-11-03"],
+      ["2 · Sistemas de venta","Funnel","VSL de chat editado y metido en el pre-call","","Editores","P0",null,"2026-11-06"],
+      ["2 · Sistemas de venta","Ventas","Otro número de WhatsApp comprado y calentándose","Si bajan el principal en medio del lanzamiento, se pasa a este. Unas 2 semanas de uso real.","Santi","P0",null,"2026-10-29"],
+      ["2 · Sistemas de venta","Ventas","Sistema de ventas implementado: Calendly → Gmail → confirmer → closer","SOP-PRE-CALL-AGENDA-DIRECTA v3. Un dueño por paso para que no sea un caos.","Santi","P0",-12,null],
+      ["2 · Sistemas de venta","Ventas","Links exclusivos de agenda y de pago, y CRM listo para el webinar","","Santi","P0",-12,null],
+      ["2 · Sistemas de venta","Ventas","Número de respaldo calentado y probado","","Santi","P1",-10,null],
+      ["2 · Sistemas de venta","Ventas","Formulario de aplicación y pipeline de solicitudes actualizados","","Claude","P1",-7,null],
+
+      ["3 · Ads","Ads","Guiones de 12 anuncios de adquisición y 5 de nutrición","Antes de la semana del vivo de Sebas.","Claude","P0",-18,null],
+      ["3 · Ads","Funnel","VSL de la landing: reusar el v4.3 o guion nuevo","","Claude","P1",-18,null],
+      ["3 · Ads","Ads","Cuenta publicitaria principal y 2 de respaldo calentadas","webinars/SOP-CUENTAS-META-ANTIBAN.md.","Santi","P0",-16,null],
+      ["3 · Ads","Ads","Estiven graba los anuncios (y el VSL si es nuevo)","En 3 lugares, con fondos y ropa distintos.","Estiven","P0",-15,null],
+      ["3 · Ads","Ads","Todo editado","","Editores","P0",-12,null],
+      ["3 · Ads","Ads","Campaña de adquisición configurada y píxel conectado","Queda en borrador hasta tu OK.","Santi","P0",-11,null],
+      ["3 · Ads","Ads","Panel de lanzamiento con CPL objetivo y techo","","Claude","P1",-11,null],
+      ["3 · Ads","Ads","Prender los ads de adquisición (10 días)","","Santi","P0",-10,null],
+      ["3 · Ads","Ads","Optimizar los ads a mano (todos los días hasta el vivo)","","Santi","P1",-9,null],
+      ["3 · Ads","Ads","Campaña de nutrición a los opt-ins","","Santi","P1",-6,null],
+      ["3 · Ads","Ads","Ads de reminder con la fecha (prender los 3 días previos)","","Santi","P1",-3,null],
+
+      ["4 · Funnel","Funnel","Landing y thank you con la fecha nueva, probadas con un registro real","","Santi","P0",-11,null],
+      ["4 · Funnel","Funnel","GHL: workflows y emails con fecha, hora y link de Zoom revisados","El 22 salieron 2 emails con el link de marcador: revisar cada uno.","Santi","P0",-11,null],
+      ["4 · Funnel","Funnel","Grupo de WhatsApp nuevo y bienvenida","","Santi","P0",-11,null],
+      ["4 · Funnel","Funnel","Secuencia de nutrición del grupo y emails","","Claude","P0",-11,null],
+      ["4 · Funnel","Funnel","Zoom de pago con el link en todos lados","","Santi","P0",-7,null],
+      ["4 · Funnel","Funnel","Envíos del día del vivo programados y probados","","Santi","P0",-1,null],
+
+      ["5 · Webinar","Funnel","Deck actualizado con lo que falló el 22","","Claude","P0",-5,null],
+      ["5 · Webinar","Funnel","Ensayo completo con Estiven","","Estiven","P0",-2,null],
+      ["5 · Webinar","Funnel","Check técnico y notas con todos los links","","Santi","P0",-1,null],
+      ["5 · Webinar","Funnel","Webinar en vivo","","Estiven","P0",0,null],
+
+      ["6 · Post webinar","Ads","Ads post webinar y replay","","Santi","P1",1,null],
+      ["6 · Post webinar","Ventas","3 días de llamadas tomadas y seguimiento","","Equipo de ventas","P0",3,null],
+      ["6 · Post webinar","Ventas","Cerrar la ventana y cargar resultados en Primal","","Santi","P1",7,null]
     ],
     "primal": [
       ["Sistemas","Sistemas","Instalar ntfy en el celular y suscribirte a tu canal de avisos","Tareas → Avisos: ahí está el canal y el botón de prueba.","Santi","P0",null,"2026-10-27"],
