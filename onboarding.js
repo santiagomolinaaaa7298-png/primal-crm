@@ -9,6 +9,7 @@ const ONB_BUCKET = "onboarding";
 const ONB_KEY = "primal-onb-clave";
 let ONB = { clave:(()=>{ try{ return localStorage.getItem(ONB_KEY)||""; }catch(e){ return ""; } })(), lista:null, ver:null, error:"", hayClave:null };
 
+const ONB_TOTAL = () => ONB_BLOQUES.reduce((a,b)=>a+b.preguntas.length,0);
 const onbLink = t => `${ONB_URL}/f/${t}`;
 const onbAudioUrl = p => sb.storage.from(ONB_BUCKET).getPublicUrl(p).data.publicUrl;
 const onbRespondida = r => r && ((r.texto||"").trim() || (r.audios||[]).length || (r.archivos||[]).length);
@@ -41,10 +42,10 @@ async function renderOnboarding(){
   ${!L.length?`<div class="panel"><div class="empty" style="padding:28px">Todavía no hay clientes. Crea uno con <b>+ Cliente</b> y mándale su link.</div></div>`:
   `<section class="onb-grid">${L.map(c=>{ const env=Object.keys(c.enviados||{}).length;
     return `<article class="panel onb-card" onclick="onbAbrir('${esc(c.token)}')">
-      <div class="onb-top"><div><b class="onb-nm">${esc(c.nombre)}</b><div class="mini">${esc(c.oferta||"")}</div></div>
-        <span class="tag ${env===9?"ok":c.respondidas?"ember":""}">${env===9?"Completo":c.abierto_at?(c.respondidas?"Respondiendo":"Abrió el link"):"Sin abrir"}</span></div>
-      <div class="onb-bar"><i style="width:${Math.round(c.respondidas/39*100)}%"></i></div>
-      <div class="onb-nums"><span><b>${c.respondidas}</b>/39 respondidas</span><span><b>${c.audios}</b> audios</span><span><b>${env}</b>/9 bloques</span></div>
+      <div class="onb-top"><div><b class="onb-nm">${esc(c.nombre)}</b><div class="mini">${esc((c.datos&&c.datos.programa)||c.oferta||"")}</div></div>
+        <span class="tag ${env>=ONB_BLOQUES.length?"ok":c.respondidas?"ember":""}">${env>=ONB_BLOQUES.length?"Completo":c.abierto_at?(c.respondidas?"Respondiendo":"Abrió el link"):"Sin abrir"}</span></div>
+      <div class="onb-bar"><i style="width:${Math.round(c.respondidas/ONB_TOTAL()*100)}%"></i></div>
+      <div class="onb-nums"><span><b>${c.respondidas}</b>/${ONB_TOTAL()} respondidas</span><span><b>${c.audios}</b> audios</span><span><b>${env}</b>/${ONB_BLOQUES.length} bloques</span></div>
       <div class="onb-link" onclick="event.stopPropagation()"><code>${esc(onbLink(c.token).replace(/^https?:\/\//,""))}</code>
         <button class="btn xs" onclick="onbCopiar('${esc(c.token)}')">Copiar link</button></div>
       <div class="mini" style="text-transform:none;letter-spacing:.04em">${c.actualizado_at&&c.respondidas?"Última respuesta "+onbFecha(c.actualizado_at):"Creado "+onbFecha(c.creado_at)}</div>
@@ -69,7 +70,7 @@ function onbLogin(el){
 function onbNuevo(){
   openModal({ title:"Nuevo cliente · <i>onboarding</i>", saveLabel:"Crear link", body:`
     <div class="f"><label>Nombre (como lo saludamos)</label><input id="on-nombre" placeholder="Viteri" /></div>
-    <div class="f"><label>Oferta</label><select id="on-oferta"><option>Consultoría 90 días</option><option>Webinar 10K</option><option value="">Otra</option></select></div>
+    <div class="f"><label>Oferta</label><select id="on-oferta">${ONB_PROGRAMAS.map(o=>`<option>${esc(o)}</option>`).join("")}<option value="">Que lo elija el cliente</option></select></div>
     <div class="f"><label>Inicio del link (opcional)</label><input id="on-slug" class="mono" placeholder="viteri" /></div>
     <div class="mini" style="text-transform:none;letter-spacing:.03em">El link queda como <code>/f/viteri-3f9a2</code>: el final al azar hace que nadie pueda adivinarlo.</div>`,
     async onSave(){ const nombre=$("#on-nombre").value.trim(); if(!nombre){ toast("Falta el nombre"); return false; }
@@ -112,9 +113,9 @@ function onbDetalle(el){
     <button class="btn sm ghost" onclick="onbAbrir('${esc(c.token)}')">Actualizar</button>
   </div>
   <section class="panel onb-head">
-    <div><span class="eyebrow">${esc(c.oferta||"Onboarding")}</span>
+    <div><span class="eyebrow">${esc(d.programa||c.oferta||"Onboarding")}</span>
       <h2 class="onb-h">${esc(d.nombre||c.nombre)}</h2>
-      <div class="mini" style="text-transform:none;letter-spacing:.04em">${resp}/39 respondidas · ${Object.keys(c.enviados||{}).length}/9 bloques enviados${c.actualizado_at?" · última actividad "+onbFecha(c.actualizado_at):""}</div></div>
+      <div class="mini" style="text-transform:none;letter-spacing:.04em">${resp}/${ONB_TOTAL()} respondidas · ${Object.keys(c.enviados||{}).length}/${ONB_BLOQUES.length} bloques enviados${c.actualizado_at?" · última actividad "+onbFecha(c.actualizado_at):""}</div></div>
     <dl class="onb-datos">${ONB_DATOS.filter(x=>d[x.k]).map(x=>`<div><dt>${esc(x.l)}</dt><dd>${x.k==="whatsapp"?`<a href="https://wa.me/${esc(String(d[x.k]).replace(/\D/g,""))}" target="_blank" rel="noopener">${esc(d[x.k])}</a>`:x.k==="email"?`<a href="mailto:${esc(d[x.k])}">${esc(d[x.k])}</a>`:esc(d[x.k])}</dd></div>`).join("")||`<div class="mini">Todavía no completó sus datos.</div>`}</dl>
   </section>
   ${ONB_BLOQUES.map(b=>{ const env=(c.enviados||{})[b.n];
