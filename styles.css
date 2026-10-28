@@ -371,3 +371,34 @@ table.tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}
 #view-norte .tbl input:focus{border-color:var(--line-2)}
 #view-norte .tbl tr:hover td{background:transparent}
 #view-norte .tbl td.muted{color:var(--muted);font-size:12px}
+
+/* ---------- vista Onboarding (respuestas de los clientes de consultoría) ---------- */
+.onb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;margin-top:6px}
+.onb-card{cursor:pointer;display:grid;gap:12px;transition:border-color .18s}
+.onb-card:hover{border-color:var(--line-2)}
+.onb-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.onb-nm{font-family:var(--display);font-style:italic;font-weight:700;font-size:24px;line-height:1.1}
+.onb-bar{height:2px;background:rgba(243,238,228,.08);border-radius:2px;overflow:hidden}
+.onb-bar i{display:block;height:100%;background:var(--gold-grad)}
+.onb-nums{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.onb-nums b{font-family:var(--num);font-weight:500;font-size:17px;color:var(--ivory);margin-right:2px}
+.onb-link{display:flex;gap:8px;align-items:center;min-width:0}
+.onb-link code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:11px;color:var(--gold)}
+.onb-head{display:grid;grid-template-columns:1fr 1.2fr;gap:24px;margin-top:6px}
+@media(max-width:760px){.onb-head{grid-template-columns:1fr}}
+.onb-h{font-family:var(--display);font-style:italic;font-weight:800;font-size:40px;line-height:1.05;margin:8px 0 6px}
+.onb-datos{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px 18px;margin:0}
+.onb-datos dt{font-family:var(--mono);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.onb-datos dd{margin:2px 0 0;font-size:14px;word-break:break-word}
+.onb-bloque{margin-top:12px}
+.onb-bh{display:flex;align-items:center;gap:12px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.onb-bh .spacer{flex:1}
+.onb-bn{font-family:var(--num);color:var(--gold);font-size:22px}
+.onb-q{padding:14px 0;border-bottom:1px solid var(--line)}
+.onb-q:last-child{border-bottom:0}
+.onb-q.vacia{opacity:.5}
+.onb-qt{display:flex;gap:10px;font-size:13px;color:var(--muted)}
+.onb-qt span{font-family:var(--num);color:var(--gold);min-width:20px}
+.onb-txt{white-space:pre-wrap;margin:8px 0 0 30px;font-size:14.5px;line-height:1.6;color:var(--ivory)}
+.onb-audio{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0 0 30px}
+.onb-audio audio{height:34px;max-width:100%;flex:1 1 260px;color-scheme:dark}
