@@ -4,7 +4,7 @@
    Mismo Supabase que el CRM. Las tablas onb_* están cerradas: todo pasa por las funciones
    onb_admin_* con la clave de admin (se crea la primera vez desde acá y queda en este navegador).
    ============================================================ */
-const ONB_URL = "https://primal-onboarding.vercel.app";   // ← dirección pública de la página de onboarding
+const ONB_URL = "https://onboarding.primalgrowth.co";   // ← dirección pública de la página de onboarding (también responde primal-onboarding.vercel.app)
 const ONB_BUCKET = "onboarding";
 const ONB_KEY = "primal-onb-clave";
 let ONB = { clave:(()=>{ try{ return localStorage.getItem(ONB_KEY)||""; }catch(e){ return ""; } })(), lista:null, ver:null, error:"", hayClave:null };
