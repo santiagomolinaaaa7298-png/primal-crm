@@ -1,11 +1,12 @@
 /* ============================================================
-   PRIMAL · Formularios de onboarding
-   v3 (29/10/2026, pedido de Santiago): dos formularios por cliente, con el mismo link base.
-     · entrevista  → /f/{token}  La entrevista de onboarding al creador (SOP Limitless, bloques A–H).
-                     De acá salen avatar, oferta, método único y estrategia de marketing.
-     · asociacion  → /a/{token}  Documentos y accesos que necesita Primal para arrancar a trabajar
-                     (oferta, grupos, CRMs, llamadas grabadas, Drive, Instagram, ManyChat, Ads Manager).
-   Los números de pregunta y de bloque no se repiten entre formularios: comparten la tabla onb_respuestas.
+   PRIMAL · Formulario de onboarding
+   v4 (30/10/2026, pedido de Santiago): UN solo formulario, sin "entrevista" por separado.
+     Bloques 1-8: la entrevista de onboarding al creador (SOP Limitless, bloques A–H): de acá salen
+                  avatar, oferta, método único y estrategia de marketing.
+     Bloques 11-17: documentos y accesos que necesita Primal para arrancar (oferta, grupos, CRMs,
+                  llamadas grabadas, Drive, Instagram, ManyChat, Ads Manager). Conservan la numeración de la v3
+                  (bloques 11..17, preguntas 51..65) para no tocar lo ya guardado en onb_respuestas.
+   Link: /f/{token}. /a/{token} sigue funcionando y abre el mismo formulario.
    El mismo archivo lo usa la vista Onboarding del CRM (copiado en primal-crm/onboarding-preguntas.js).
    adjuntos:true → la pregunta deja subir archivos además de texto y audio.  h → ayuda chica bajo la pregunta.
    ============================================================ */
@@ -16,17 +17,16 @@ window.ONB_ACCESOS = { email:"primaltraining.co@gmail.com", whatsapp:"+57 302 45
 const E = window.ONB_ACCESOS.email, W = window.ONB_ACCESOS.whatsapp;
 
 window.ONB_FORMS = {
-
-  entrevista: {
-    id:"entrevista", ruta:"f", nombre:"Entrevista de onboarding", kicker:"Onboarding",
-    lead:"Antes de arrancar necesito conocerte de verdad: <b>cómo llegaste acá, qué haces distinto, a quién le das los mejores resultados y hacia dónde vas.</b> De estas respuestas salen las cuatro cosas que vamos a construir: tu avatar, tu oferta, tu método único y tu estrategia de marketing.",
+  onboarding: {
+    id:"onboarding", ruta:"f", nombre:"Onboarding", kicker:"Onboarding",
+    lead:"Antes de arrancar necesito dos cosas: <b>conocerte de verdad</b> (cómo llegaste acá, qué haces distinto, a quién le das los mejores resultados y hacia dónde vas) y <b>poder entrar donde pasa todo</b> (tu oferta, tus grupos, tus sistemas, tus llamadas, tu material y tus cuentas). De acá salen tu avatar, tu oferta, tu método único y tu estrategia.",
     pasos:[
       ["Por texto o por audio","Cada pregunta tiene su botón para grabar desde el celular. Háblame como le hablarías a un amigo; si no te gusta cómo quedó, lo vuelves a grabar."],
       ["Nunca te quedes con la primera respuesta","Cada respuesta tiene una capa abajo. Si dices \"escucho al cliente\", cuéntame qué haces concretamente para escuchar distinto que el resto."],
       ["Se guarda solo","Puedes cerrar y volver con este mismo link: lo que respondiste sigue acá. Al final de cada bloque me lo envías."],
-      ["Si todavía no tienes casos","No pasa nada: el peso cae en tu historia y tu recorrido. Sáltate lo que no aplique o cuéntame por qué no aplica."],
+      ["Lo que ya me mandaste por el chat, no lo repitas","Si algo ya me lo pasaste por WhatsApp, salta ese punto o escribe \"ya te lo mandé\". Y si algo no aplica, cuéntame por qué."],
     ],
-    fin:"Con esto tengo con qué armar tu avatar, tu oferta, tu método único y tu estrategia de marketing. Lo siguiente lo hablamos en la llamada.",
+    fin:"Con esto tengo con qué armar tu avatar, tu oferta, tu método único y tu estrategia, y puedo entrar a trabajar de verdad. Lo que falte lo cerramos por el chat.",
     datos:true,
     bloques:[
       { n:1, titulo:"Tu historia y tu recorrido", bajada:"Cómo llegaste acá. De acá salen la historia que vende, tu voz y tu estrategia.", preguntas:[
@@ -77,60 +77,42 @@ window.ONB_FORMS = {
         { n:31, t:"¿Qué quieres mostrar y qué no públicamente? ¿Contra qué o contra quién te posicionas (tu enemigo en el mercado)?" },
         { n:32, t:"¿Qué tan rápido quieres lanzar? ¿Cuáles son tus mayores cuellos de botella hoy: costo de venta, costo de marketing, funnels, oferta?" },
       ]},
-      { n:9, titulo:"Cierre", bajada:"Lo que no te pregunté y el material que falta.", preguntas:[
-        { n:33, t:"¿Quieres sumar, contar o preguntar algo más?" },
-        { n:34, t:"Mándame lo que falte: tu competencia directa, referentes de Estados Unidos, testimonios en crudo y grabaciones de tus últimas llamadas.", adjuntos:true },
-      ]},
-    ],
-  },
-
-  asociacion: {
-    id:"asociacion", ruta:"a", nombre:"Documentos y accesos", kicker:"Asociación · documentos y accesos",
-    lead:"Para arrancar a trabajar necesito <b>ver lo que ya tienes y poder entrar donde pasa todo</b>: tu oferta, tus grupos, tus sistemas, tus llamadas, tu material y tus cuentas. Nada de esto tiene que estar perfecto: mándamelo como esté.",
-    pasos:[
-      ["Sube, pega o cuéntame","Cada punto deja subir archivos, pegar links o responderme por audio si es más rápido explicarlo hablando."],
-      ["Nunca me mandes contraseñas","Para cada cuenta te digo cómo invitarme. Si una plataforma no deja invitar, dímelo acá y lo resolvemos por el chat."],
-      ["Se guarda solo","Puedes cerrar y volver con este mismo link: lo que subiste sigue acá. Al final de cada bloque me lo envías."],
-      ["Si algo no lo tienes","Dímelo igual: \"no tengo CRM\" también es información."],
-    ],
-    fin:"Con esto puedo entrar a trabajar de verdad. Lo que falte lo vamos cerrando por el chat.",
-    datos:false,
-    bloques:[
-      { n:11, titulo:"Tu oferta", bajada:"Todo lo que ya existe sobre lo que vendes.", preguntas:[
+      { n:11, titulo:"Tu oferta, por escrito", bajada:"Todo lo que ya existe sobre lo que vendes. Si ya me lo mandaste por el chat, sáltalo.", preguntas:[
         { n:51, t:"Todos los documentos de tu oferta que tengas: PDF o presentación de venta, página de venta, lista de precios, contrato, garantía, guion de venta. Súbelos acá o pega los links.", adjuntos:true },
         { n:52, t:"Tu programa por dentro: ¿dónde vive (Skool, Notion, Drive, Kajabi, Hotmart…), qué módulos tiene, cómo es el onboarding del alumno y el calendario de sesiones?", h:`Si puedes, agrégame como alumno o admin con ${E} y pega acá el link.` },
       ]},
       { n:12, titulo:"Tus grupos", bajada:"Donde están tus clientes hablando.", preguntas:[
-        { n:53, t:"Métеme a todos los grupos de clientes y de comunidad que tengas (WhatsApp, Telegram, Skool, Discord). Pega acá los links de invitación o confírmame que ya me agregaste.", h:`Mi WhatsApp: ${W}. Mi email: ${E}.` },
+        { n:53, t:"Méteme a todos los grupos de clientes y de comunidad que tengas (WhatsApp, Telegram, Skool, Discord). Pega acá los links de invitación o confírmame que ya me agregaste.", h:`Mi WhatsApp: ${W}. Mi email: ${E}.` },
       ]},
-      { n:13, titulo:"CRMs y sistemas de medición", bajada:"Con qué organizas y mides hoy.", preguntas:[
+      { n:13, prio:true, titulo:"CRMs, medición y números", bajada:"Con qué organizas y mides hoy, y los números reales.", preguntas:[
         { n:54, t:"¿Qué usas para organizar y medir? CRM, agenda (Calendly, Cal.com), pagos (Stripe, Hotmart, PayPal), formulario de aplicación (Typeform, Google Forms), planillas, ManyChat, email marketing. Dame acceso a cada uno y anótame acá cuáles son y con qué email entré.", h:`Invítame con ${E}. Si una herramienta no deja invitar, dímelo acá.` },
         { n:55, t:"Exporta y sube: las respuestas de tu formulario de aplicación (CSV) y tus ventas de los últimos 6 a 12 meses (export de la pasarela o tu planilla: fecha, cliente, monto, moneda, producto, país, reembolsos).", adjuntos:true },
         { n:56, t:"Tus costos mensuales actuales: herramientas, anuncios, comisiones de pasarela, freelancers, equipo. Un número aproximado por rubro alcanza.", h:"Es la base para calcular el profit del acuerdo desde el día uno." },
       ]},
-      { n:14, titulo:"Llamadas grabadas", bajada:"Lo que más me sirve de todo: cómo vendes y cómo hablan tus clientes.", preguntas:[
+      { n:14, prio:true, titulo:"Llamadas grabadas", bajada:"Lo que más me sirve de todo: cómo vendes y cómo hablan tus clientes.", preguntas:[
         { n:57, t:"Todas las llamadas de venta que tengas grabadas (Fathom, Zoom, Meet, Loom, celular). Pega los links o sube los archivos. Mientras más, mejor.", adjuntos:true, h:"Si están en Fathom, compárteme el equipo o cada grabación con mi email." },
         { n:58, t:"Las llamadas con clientes: sesiones, onboarding, seguimiento, cierre de programa. Pega los links o sube los archivos.", adjuntos:true },
       ]},
-      { n:15, titulo:"Tu material visual", bajada:"Para armar historias, anuncios y contenido sin tener que pedirte una foto cada vez.", preguntas:[
+      { n:15, prio:true, titulo:"Tu material visual", bajada:"Para armar historias, anuncios y contenido sin tener que pedirte una foto cada vez.", preguntas:[
         { n:59, t:"Un Drive con todas tus fotos y videos: crudos, b-roll, detrás de cámara, viajes, entrenando, trabajando, con clientes, lo que sea. Pega el link con permiso de edición.", h:"No lo filtres: mándame todo y yo elijo." },
         { n:60, t:"Logo, colores, tipografías y cualquier material de marca que tengas (plantillas, portadas, miniaturas).", adjuntos:true },
       ]},
-      { n:16, titulo:"Accesos a tus cuentas", bajada:"Invítame; nunca me mandes contraseñas.", preguntas:[
+      { n:16, prio:true, titulo:"Accesos a tus cuentas", bajada:"Invítame; nunca me mandes contraseñas.", preguntas:[
         { n:61, t:"Instagram: agrégame desde Meta Business Suite (Configuración → Personas → Agregar) o desde la app (Configuración → Centro de cuentas → Compartir acceso). Confírmame acá cuando esté hecho y con qué cuenta.", h:`Invítame con ${E}.` },
         { n:62, t:"ManyChat: Settings → Team Members → Invite, como Admin. Confírmame acá. Si no usas ManyChat, dímelo.", h:`Invítame con ${E}.` },
         { n:63, t:"Ads Manager / Business Manager: si tienes cuenta publicitaria, agrégame como admin de la cuenta y del Business Manager (Configuración del negocio → Personas). Si nunca corriste anuncios, dímelo acá.", h:`Invítame con ${E}.` },
         { n:64, t:"Otros accesos que me sirvan: YouTube, TikTok, página web y dominio, email marketing, Calendly. Anota cuáles diste y a qué email." },
       ]},
-      { n:17, titulo:"Lo que falta", bajada:"Por si me olvidé de algo.", preguntas:[
-        { n:65, t:"¿Hay algo más que tengas y creas que me sirve? Lo que sea: una base de datos de leads, un curso viejo, un webinar grabado, una lista de email, una encuesta que hiciste.", adjuntos:true },
+      { n:17, titulo:"Lo que falta", bajada:"Lo que no te pregunté y suma.", preguntas:[
+        { n:33, t:"¿Quieres sumar, contar o preguntar algo más? Contexto de tu vida, de tu negocio, de un socio, de un proyecto en paralelo, lo que sea." },
+        { n:65, t:"¿Hay algo más que tengas y creas que me sirve? Tu competencia directa, referentes de Estados Unidos, testimonios en crudo, una base de leads, un curso viejo, un webinar grabado, una lista de email, una encuesta que hiciste.", adjuntos:true },
       ]},
     ],
   },
 };
 
-/* Compatibilidad: ONB_BLOQUES sigue siendo la entrevista (lo usan el CRM y app.js). */
-window.ONB_BLOQUES = window.ONB_FORMS.entrevista.bloques;
+/* Compatibilidad: ONB_BLOQUES son los bloques del formulario (lo usan el CRM y app.js). */
+window.ONB_BLOQUES = window.ONB_FORMS.onboarding.bloques;
 
 /* ¿A qué programa entra? Opciones de circulito en "Antes de empezar". */
 window.ONB_PROGRAMAS = ["Webinar 10K", "Consultoría 90 días", "Asociación con Primal Growth"];
