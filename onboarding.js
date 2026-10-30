@@ -12,7 +12,7 @@ let ONB = { clave:(()=>{ try{ return localStorage.getItem(ONB_KEY)||""; }catch(e
 /* v4 (30/10/2026): un solo formulario por cliente (entrevista A–H + documentos y accesos), link /f/{token}. */
 const ONB_FORMAS = Object.values(ONB_FORMS);
 const ONB_TOTAL = (f=ONB_FORMS.onboarding) => f.bloques.reduce((a,b)=>a+b.preguntas.length,0);
-const onbLink = t => `${ONB_URL}/f/${t}`;
+const onbLink = t => `${ONB_URL}/${t}`;
 const onbEnviadosDe = (c, f) => f.bloques.filter(b=>(c.enviados||{})[b.n]).length;
 const onbRespondidasDe = (c, f) => { const R=c.respuestas||{}; return f.bloques.flatMap(b=>b.preguntas).filter(p=>onbRespondida(R[p.n])).length; };
 const onbAudioUrl = p => sb.storage.from(ONB_BUCKET).getPublicUrl(p).data.publicUrl;
@@ -76,7 +76,7 @@ function onbNuevo(){
     <div class="f"><label>Nombre (como lo saludamos)</label><input id="on-nombre" placeholder="Viteri" /></div>
     <div class="f"><label>Oferta</label><select id="on-oferta">${ONB_PROGRAMAS.map(o=>`<option>${esc(o)}</option>`).join("")}<option value="">Que lo elija el cliente</option></select></div>
     <div class="f"><label>Inicio del link (opcional)</label><input id="on-slug" class="mono" placeholder="viteri" /></div>
-    <div class="mini" style="text-transform:none;letter-spacing:.03em">El link queda como <code>/f/viteri-3f9a2</code>: el final al azar hace que nadie pueda adivinarlo.</div>`,
+    <div class="mini" style="text-transform:none;letter-spacing:.03em">El link queda como <code>onboarding.primalgrowth.co/viteri-3f9a2</code>: el final al azar hace que nadie pueda adivinarlo.</div>`,
     async onSave(){ const nombre=$("#on-nombre").value.trim(); if(!nombre){ toast("Falta el nombre"); return false; }
       const { data, error } = await sb.rpc("onb_admin_crear", { p_clave:ONB.clave, p_nombre:nombre, p_oferta:$("#on-oferta").value, p_slug:$("#on-slug").value.trim() });
       if(error){ toast(error.message); return false; }
