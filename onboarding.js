@@ -12,7 +12,11 @@ let ONB = { clave:(()=>{ try{ return localStorage.getItem(ONB_KEY)||""; }catch(e
 /* v4 (30/10/2026): un solo formulario por cliente (entrevista A–H + documentos y accesos), link /f/{token}. */
 const ONB_FORMAS = Object.values(ONB_FORMS);
 const ONB_TOTAL = (f=ONB_FORMS.onboarding) => f.bloques.reduce((a,b)=>a+b.preguntas.length,0);
-const onbLink = t => `${ONB_URL}/${t}`;
+/* Link limpio + código: el token santino-ed467 se manda como onboarding.primalgrowth.co/santino y código ed467.
+   El link con el token completo sigue entrando directo. */
+const onbParte = t => { const m=/^(.+)-([0-9a-f]{5})$/.exec(t||""); return m ? { slug:m[1], code:m[2] } : { slug:t, code:"" }; };
+const onbLink = t => `${ONB_URL}/${onbParte(t).slug}`;
+const onbMensaje = t => { const p=onbParte(t); return `Tu onboarding: ${onbLink(t)}\nCódigo: ${p.code}`; };
 const onbEnviadosDe = (c, f) => f.bloques.filter(b=>(c.enviados||{})[b.n]).length;
 const onbRespondidasDe = (c, f) => { const R=c.respuestas||{}; return f.bloques.flatMap(b=>b.preguntas).filter(p=>onbRespondida(R[p.n])).length; };
 const onbAudioUrl = p => sb.storage.from(ONB_BUCKET).getPublicUrl(p).data.publicUrl;
@@ -50,8 +54,8 @@ async function renderOnboarding(){
         <span class="tag ${env>=nb?"ok":c.respondidas?"ember":""}">${env>=nb?"Completo":c.abierto_at?(c.respondidas?"Respondiendo":"Abrió el link"):"Sin abrir"}</span></div>
       <div class="onb-bar"><i style="width:${Math.round(c.respondidas/ONB_TOTAL()*100)}%"></i></div>
       <div class="onb-nums"><span><b>${c.respondidas}</b>/${ONB_TOTAL()} respondidas</span><span><b>${c.audios}</b> audios</span><span><b>${env}</b>/${nb} bloques</span></div>
-      <div class="onb-link" onclick="event.stopPropagation()"><code>${esc(onbLink(c.token).replace(/^https?:\/\//,""))}</code>
-        <button class="btn xs" onclick="onbCopiar('${esc(c.token)}')">Copiar link</button></div>
+      <div class="onb-link" onclick="event.stopPropagation()"><code>${esc(onbLink(c.token).replace(/^https?:\/\//,""))}</code> <code title="Código">${esc(onbParte(c.token).code)}</code>
+        <button class="btn xs" onclick="onbCopiar('${esc(c.token)}')">Copiar link + código</button></div>
       <div class="mini" style="text-transform:none;letter-spacing:.04em">${c.actualizado_at&&c.respondidas?"Última respuesta "+onbFecha(c.actualizado_at):"Creado "+onbFecha(c.creado_at)}</div>
     </article>`; }).join("")}</section>`}`;
 }
@@ -76,7 +80,7 @@ function onbNuevo(){
     <div class="f"><label>Nombre (como lo saludamos)</label><input id="on-nombre" placeholder="Viteri" /></div>
     <div class="f"><label>Oferta</label><select id="on-oferta">${ONB_PROGRAMAS.map(o=>`<option>${esc(o)}</option>`).join("")}<option value="">Que lo elija el cliente</option></select></div>
     <div class="f"><label>Inicio del link (opcional)</label><input id="on-slug" class="mono" placeholder="viteri" /></div>
-    <div class="mini" style="text-transform:none;letter-spacing:.03em">El link queda como <code>onboarding.primalgrowth.co/viteri-3f9a2</code>: el final al azar hace que nadie pueda adivinarlo.</div>`,
+    <div class="mini" style="text-transform:none;letter-spacing:.03em">El cliente recibe <code>onboarding.primalgrowth.co/viteri</code> y un código de 5 caracteres (al azar, para que nadie entre adivinando el nombre).</div>`,
     async onSave(){ const nombre=$("#on-nombre").value.trim(); if(!nombre){ toast("Falta el nombre"); return false; }
       const { data, error } = await sb.rpc("onb_admin_crear", { p_clave:ONB.clave, p_nombre:nombre, p_oferta:$("#on-oferta").value, p_slug:$("#on-slug").value.trim() });
       if(error){ toast(error.message); return false; }
@@ -84,9 +88,9 @@ function onbNuevo(){
 }
 
 async function onbCopiar(t){
-  const l=onbLink(t);
-  try{ await navigator.clipboard.writeText(l); toast("Link copiado"); }
-  catch(e){ prompt("Copia el link:", l); }
+  const l=onbMensaje(t);
+  try{ await navigator.clipboard.writeText(l); toast("Link y código copiados"); }
+  catch(e){ prompt("Copia el link y el código:", l); }
 }
 
 async function onbAbrir(t){
@@ -114,14 +118,14 @@ function onbDetalle(el){
   <div class="filters" style="margin-top:18px">
     <button class="btn sm ghost" onclick="ONB.ver=null;ONB.lista=null;render()">← Todos</button>
     <span class="spacer"></span>
-    <button class="btn sm ghost" onclick="onbCopiar('${esc(c.token)}')">Copiar link</button>
+    <button class="btn sm ghost" onclick="onbCopiar('${esc(c.token)}')">Copiar link + código</button>
     <button class="btn sm ghost" onclick="navigator.clipboard.writeText(onbTextoPlano(ONB.ver)).then(()=>toast('Copiado en texto'))">Copiar todo en texto</button>
     <button class="btn sm ghost" onclick="onbAbrir('${esc(c.token)}')">Actualizar</button>
   </div>
   <section class="panel onb-head">
     <div><span class="eyebrow">${esc(d.programa||c.oferta||"Onboarding")}</span>
       <h2 class="onb-h">${esc(d.nombre||c.nombre)}</h2>
-      <div class="mini" style="text-transform:none;letter-spacing:.04em">${resp}/${ONB_TOTAL()} respondidas · ${onbEnviadosDe(c,ONB_FORMS.onboarding)}/${ONB_BLOQUES.length} bloques enviados${c.actualizado_at?" · última actividad "+onbFecha(c.actualizado_at):""} · <code style="text-transform:none">${esc(onbLink(c.token).replace(/^https?:\/\//,""))}</code></div></div>
+      <div class="mini" style="text-transform:none;letter-spacing:.04em">${resp}/${ONB_TOTAL()} respondidas · ${onbEnviadosDe(c,ONB_FORMS.onboarding)}/${ONB_BLOQUES.length} bloques enviados${c.actualizado_at?" · última actividad "+onbFecha(c.actualizado_at):""} · <code style="text-transform:none">${esc(onbLink(c.token).replace(/^https?:\/\//,""))}</code> · código <code>${esc(onbParte(c.token).code)}</code></div></div>
     <dl class="onb-datos">${ONB_DATOS.filter(x=>d[x.k]).map(x=>`<div><dt>${esc(x.l)}</dt><dd>${x.k==="whatsapp"?`<a href="https://wa.me/${esc(String(d[x.k]).replace(/\D/g,""))}" target="_blank" rel="noopener">${esc(d[x.k])}</a>`:x.k==="email"?`<a href="mailto:${esc(d[x.k])}">${esc(d[x.k])}</a>`:esc(d[x.k])}</dd></div>`).join("")||`<div class="mini">Todavía no completó sus datos.</div>`}</dl>
   </section>
   ${ONB_FORMAS.map(f=>f.bloques.map((b,i)=>{ const env=(c.enviados||{})[b.n];
