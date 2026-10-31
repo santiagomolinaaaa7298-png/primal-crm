@@ -5,9 +5,10 @@
    del evento, la tarea se mueve sola. Si es null, manda la fecha fija.
    Se carga una vez por versión (config.seedTareas); lo que edites en la app no se pisa.
    v2 (26 oct): Estiven ya no hace VSL funnel sino otro webinar; "quitar" borra el proyecto viejo.
+   v3 (31 oct): proyecto Santino Lofeudo con el checklist completo y lo acordado en la llamada del 31 oct.
    ============================================================ */
 const T_SEED = {
-  version: 2,
+  version: 3,
   quitar: ["estiven-vsl"],
   proyectos: [
     { id:"sebas-nov", nombre:"Webinar Sebas Ramos", cliente:"Sebas", tipo:"pago", evento:"2026-11-19", hora:"20:00",
@@ -16,6 +17,8 @@ const T_SEED = {
       notas:"Fecha PROPUESTA (jueves 10 dic): confirmarla con Amelia y moverla acá; todas las fechas se recalculan solas. Orgánico: no cuenta para ads. Primero rearmar el equipo de ventas y el plan de envíos." },
     { id:"estiven-dic", nombre:"Webinar Estiven", cliente:"Estiven", tipo:"pago", evento:"2026-12-03", hora:"20:00",
       notas:"Otro webinar (no VSL funnel). Fecha PROPUESTA: jueves 3 dic, 8 p. m. Colombia: confirmarla con Estiven y moverla acá; todo se recalcula. Guiones antes del 15 nov para no chocar con la semana del vivo de Sebas. Lo único de VSL que falta es el VSL de chat (va primero). Antes, ordenar ventas: el 22 oct el triaje llamó 16-19 h tarde a los calificados y el CRM quedó con 0 llamadas y 0 pagos." },
+    { id:"santino", nombre:"Santino Lofeudo · evergreen + webinar 1", cliente:"Santino", tipo:"organico", evento:"2026-11-19", hora:"20:00",
+      notas:"Trader de 18 años en Dubái, 30 % del profit. Meta: 100K al mes (50K evergreen + 50K webinars). Webinar 1 jueves 19 nov, 100 % orgánico: nada de pauta hasta facturar 30K al mes con orgánico (Santino, 31 oct). Adquisición 10 días (9 al 19 nov). Fuentes: santino/LLAMADA-31-OCT.md, ROADMAP-SANTINO.md, Miro Roadmap · Santino Lofeudo, calculadora Ruta a 100K." },
     { id:"primal", nombre:"Primal Growth · mi negocio", cliente:"Primal", tipo:"interno", evento:"", hora:"",
       notas:"Lo tuyo: la meta de 30K de profit al mes, el análisis financiero y los sistemas que te mantienen al día." }
   ],
@@ -173,6 +176,70 @@ const T_SEED = {
       ["6 · Post webinar","Ads","Ads post webinar y replay","","Santi","P1",1,null],
       ["6 · Post webinar","Ventas","3 días de llamadas tomadas y seguimiento","","Equipo de ventas","P0",3,null],
       ["6 · Post webinar","Ventas","Cerrar la ventana y cargar resultados en Primal","","Santi","P1",7,null]
+    ],
+    "santino": [
+      ["0 · Decisiones","Estrategia","Confirmar la escalera nueva: 400 · Premium 1.000 (un pago) o 2 × 600 · VIP 3.500 · Black 15K","Dejar de vender General 3 m (900). Santino prefiere Premium a 1.200: decidir qué se testea el primer mes.","Santino","P0",null,"2026-11-02"],
+      ["0 · Decisiones","Estrategia","Confirmar que el VIP tiene una sola llamada 1 a 1 inicial y si se mantiene","43 llamadas iniciales al mes es insostenible. Opción: solo para el anual.","Santino","P1",null,"2026-11-03"],
+      ["0 · Decisiones","Contenido orgánico","Aprobar el título de la serie: Road a 100K al mes como trader · Episodio N","Reemplaza a 'De 1.000 a 1.000.000'. Mismo título siempre, canal principal, playlist.","Santino","P0",null,"2026-11-01"],
+      ["0 · Decisiones","Estrategia","Confirmar hora del webinar 1 (20:00 España / 16:00 Argentina) y que es 100 % orgánico","Sin pauta hasta 30K al mes con orgánico.","Santino","P0",null,"2026-11-03"],
+      ["0 · Decisiones","Ventas","Confirmar: Santino 20 min de WhatsApp al día, el resto lo maneja el setter","","Santino","P1",null,"2026-11-05"],
+
+      ["1 · Ya","Contenido orgánico","Ver el video de 19 min de Santino y escribir el guion del BCL (6 partes)","Promesa al principiante → historia camuflada → creencias → parte técnica sin la estrategia → método → CTA WhatsApp + Calendly. Santino lo graba el 1 nov.","Claude","P0",null,"2026-10-31"],
+      ["1 · Ya","Contenido orgánico","Plan de grabación del domingo: 5 reels con guion corto + BCL","Serie Día 1, análisis del día, raw talk, 2 recortes de YouTube (editor). santino/LLAMADA-31-OCT.md sección 3.","Claude","P0",null,"2026-10-31"],
+      ["1 · Ya","Contenido orgánico","Estructura escrita de las dos series: Trading desde cero · Día N (reel) y Road a 100K · Episodio N (YouTube)","","Claude","P0",null,"2026-10-31"],
+      ["1 · Ya","Contenido orgánico","Santino graba el BCL (20-30 min) y los 3 reels del plan; el editor corta los 2 de YouTube","Más 2 historias y el día entero grabado con el celular (material del episodio 1).","Santino","P0",null,"2026-11-01"],
+      ["1 · Ya","Sistemas","Santino da acceso a Whop y Calendly y crea la comunidad de WhatsApp 'Santi Lofeudo'","Calendly 'no deja entrar': lo resuelve él. Santiago queda admin de la comunidad.","Santino","P0",null,"2026-11-01"],
+      ["1 · Ya","Contenido orgánico","Bio de Instagram con aura y CTA a YouTube","'Si quieres aprender, aprende cómo ↓' (estilo FDS). La descripción actual se queda. En adquisición del webinar el link pasa a la landing.","Claude","P1",null,"2026-11-01"],
+      ["1 · Ya","Contenido orgánico","Preguntar al amigo editor el precio de los edits anime / aura","Se habló de ~100 USD por video: confirmar.","Santi","P2",null,"2026-11-01"],
+      ["1 · Ya","Sistemas","Comunidad de WhatsApp del equipo organizada: general, ventas, closers, editores","Meter al editor de 1 USD y a los closers cuando entren.","Santi","P1",null,"2026-11-02"],
+      ["1 · Ya","Contenido orgánico","Calendario semanal de contenido: qué graba cada día y con qué formato","4 formatos + memes. Lo guionizado (análisis, serie) va escrito; lo raw, solo el tema.","Claude","P0",null,"2026-11-02"],
+      ["1 · Ya","Ventas","Whop: productos de la escalera nueva, cuotas y links de pago de 50 a 3.500","Para el guion de ventas. Pide los datos de facturación de Santino.","Santi","P0",null,"2026-11-02"],
+      ["1 · Ya","Ventas","Calendly configurado: evento de 20 min, preguntas de calificación, recordatorios","País, si opera hoy, capital propio o fondeo, ingreso actual. Conectado al CRM (función santino-calendly-crm).","Santi","P0",null,"2026-11-02"],
+      ["1 · Ya","Estrategia","Doc de ofertas v1 con la escalera nueva","Qué incluye cada uno, precio, cuotas, garantía, tiempos reales. Santino valida línea por línea.","Claude","P0",null,"2026-11-03"],
+      ["1 · Ya","Finanzas","Santino manda la facturación de los 4 meses y qué pagó cada alumno de VIP y Black","Sin esto el modelo sigue en supuestos.","Santino","P0",null,"2026-11-03"],
+      ["1 · Ya","Ventas","Primer cobro real con tarjeta en Whop (un upsell)","Si falla, resolver antes de seguir.","Santino","P0",null,"2026-11-04"],
+      ["1 · Ya","Contenido orgánico","Vacante del editor del capítulo largo diario (prueba pagada con material real)","Un capítulo por día, entrega antes de las 18:00 del día siguiente. Pedir referidos a Thiago y Naza.","Santi","P1",null,"2026-11-04"],
+      ["1 · Ya","Estrategia","Producto de 400: temario del curso pregrabado (de Kajabi) y formato de la grupal semanal con coach","Coach entre los alumnos fondeados, ~400 al mes. Última instancia para quien no tiene el dinero.","Claude","P1",null,"2026-11-05"],
+      ["1 · Ya","Finanzas","Modelo financiero recalculado con la facturación real y la escalera nueva","Calculadora Ruta a 100K (artifact) + plantilla de KPIs. Los KPIs pasan al reporte diario.","Claude","P1",null,"2026-11-05"],
+
+      ["2 · YouTube y contenido","Contenido orgánico","BCL editado","","Editor","P0",null,"2026-11-02"],
+      ["2 · YouTube y contenido","Contenido orgánico","BCL publicado (oculto) con CTA WhatsApp + Calendly en descripción y comentario fijado","","Santino","P0",null,"2026-11-03"],
+      ["2 · YouTube y contenido","Contenido orgánico","Título fijo, miniatura y plantilla de descripción de la serie con los dos CTAs","","Claude","P1",null,"2026-11-03"],
+      ["2 · YouTube y contenido","Contenido orgánico","Episodio 1 publicado; desde ahí uno por día, domingo recap","","Santino","P0",null,"2026-11-04"],
+      ["2 · YouTube y contenido","Contenido orgánico","Editor: 3 recortes diarios + 1 aura/motivacional a Instagram, TikTok y Shorts","Mismo clip a las tres redes.","Editor","P1",null,"2026-11-04"],
+      ["2 · YouTube y contenido","Contenido orgánico","Historias: mínimo 2 por día operando (el trade) y 3 sin operar (mindset)","Documentar la vida, no personaje de vendedor.","Santino","P1",null,"2026-11-03"],
+      ["2 · YouTube y contenido","Contenido orgánico","TikTok activo con lo mismo de Instagram; link a YouTube al llegar a 1.000 seguidores","Hoy tiene 50.","Santino","P2",null,"2026-11-03"],
+      ["2 · YouTube y contenido","Funnel","Banco de recursos para el CTA de WhatsApp (palabra clave → recurso → setter)","Como Naza: 'escribime X y te lo mando'. Cada recurso con el gancho al webinar cuando esté en adquisición.","Claude","P1",null,"2026-11-05"],
+      ["2 · YouTube y contenido","Contenido orgánico","3 casos de éxito en la portada del canal","Permisos de alumnos (PEDIR-A-SANTINO 25).","Santino","P2",null,"2026-11-06"],
+
+      ["3 · Ventas","Ventas","Guion de setting por WhatsApp + mensaje de oferta corregido","Situación actual → deseada → a qué se dedica → idea + caso → audio de Santino → Calendly.","Claude","P0",null,"2026-11-04"],
+      ["3 · Ventas","Ventas","CRM santino-crm con la escalera nueva, Calendly conectado y reporte diario de setter y closer","Vinculado a Primal (tabla santino_pagos, columna usd).","Santi","P0",null,"2026-11-04"],
+      ["3 · Ventas","Ventas","Setter contratado y entrenado; arranca con los chats que trae el BCL","","Santi","P0",null,"2026-11-05"],
+      ["3 · Ventas","Ventas","Main closer del equipo de Santiago asignado; Lucy a leads no calificados","Guion de closing con la escalera y los links de pago.","Santi","P0",null,"2026-11-06"],
+      ["3 · Ventas","Ventas","Comisiones y contrato por rol","Closer 10 %, setter 3 %, triage 1-1,5 %, confirmer 200 USD.","Claude","P1",null,"2026-11-06"],
+      ["3 · Ventas","Funnel","WhatsApp API en número de empresa con 4 flujos: bienvenida, recordatorio, no-show, seguimiento","","Santi","P1",null,"2026-11-06"],
+      ["3 · Ventas","Ventas","Evaluación de la closer a las 10 llamadas y equipo de ventas final","","Santi","P2",null,"2026-11-13"],
+
+      ["4 · Webinar 1","Estrategia","Promesa, narrativa del webinar 1 y lista de tareas del funnel","Orgánico: landing, thank you, grupo, nutrición, recordatorios.","Claude","P0",-12,null],
+      ["4 · Webinar 1","Funnel","Landing meta safe sin cifras + thank you mínima + grupo de WhatsApp nuevo","","Santi","P0",-10,null],
+      ["4 · Webinar 1","Contenido orgánico","Arranca la adquisición: link de la bio a la landing, CTA en episodios e historias, comentario fijado en YouTube","10 días, del 9 al 19.","Santino","P0",-10,null],
+      ["4 · Webinar 1","Funnel","Registro abierto (jueves 12 nov)","","Santino","P0",-7,null],
+      ["4 · Webinar 1","Funnel","Guion del webinar: 100 a 200 láminas, una idea por lámina, pitch largo","","Claude","P0",-7,null],
+      ["4 · Webinar 1","Contenido orgánico","Secuencia de historias y recursos con 'esto es el 1 % de lo que explico en la clase del 19'","Las 3 clases de regalo de la investigación externa van al grupo.","Claude","P1",-7,null],
+      ["4 · Webinar 1","Funnel","Nutrición del grupo los 5 días previos: un mensaje por día con un objetivo","Captura, burbuja de video y texto, mezclados.","Equipo de ventas","P1",-5,null],
+      ["4 · Webinar 1","Funnel","Recordatorios de las 72 horas previas con hora de España, Argentina, México y Colombia","Tres el mismo día.","Equipo de ventas","P1",-3,null],
+      ["4 · Webinar 1","Funnel","Ensayo completo del webinar","","Santino","P0",-2,null],
+      ["4 · Webinar 1","Funnel","Webinar 1 en vivo: cierre con Calendly + setter en WhatsApp + pago en Whop","","Santino","P0",0,null],
+      ["4 · Webinar 1","Ventas","Llamadas de cierre y seguimiento de 72 horas; replay a quien no asistió","","Equipo de ventas","P0",3,null],
+      ["4 · Webinar 1","Finanzas","Números del webinar 1 en Primal y en la calculadora; ajustar escalera y modelo","Registrados, asistentes, llamadas, ventas, ticket medio.","Santi","P1",7,null],
+
+      ["5 · Cadencia","Funnel","Abrir registro del webinar 2 (jueves 3 dic): misma narrativa, excusa nueva, grupo nuevo","","Santi","P1",null,"2026-11-27"],
+      ["5 · Cadencia","Funnel","Webinar 2 en vivo","","Santino","P1",null,"2026-12-03"],
+      ["5 · Cadencia","Funnel","Webinar 3 en vivo","","Santino","P1",null,"2026-12-17"],
+      ["5 · Cadencia","Contenido orgánico","Episodio especial: balance del año y del reto","","Santino","P2",null,"2026-12-28"],
+      ["5 · Cadencia","Funnel","Webinar semanal desde el jueves 8 de enero","","Santino","P1",null,"2027-01-08"],
+      ["5 · Cadencia","Estrategia","Abrir inner circle y done with you a los alumnos actuales","Escalera Limitless, escalones 3 y 4.","Santi","P2",null,"2027-01-15"],
+      ["5 · Cadencia","Contenido orgánico","Bootcamp formal como cierre del reto","","Santino","P2",null,"2027-02-01"]
     ],
     "primal": [
       ["Sistemas","Sistemas","Instalar ntfy en el celular y suscribirte a tu canal de avisos","Tareas → Avisos: ahí está el canal y el botón de prueba.","Santi","P0",null,"2026-10-27"],
