@@ -12,6 +12,8 @@ const T_TIPOS = {pago:"Webinar pago", organico:"Webinar orgánico", vsl:"VSL fun
 const NTFY = "https://ntfy.sh";
 const NTFY_TOPIC = "primal-santi-a7f08dd811"; // canal por defecto (el que se suscribe en la app ntfy del celular)
 let T_F = {proy:"", resp:"", estado:"abiertas", modo:"fecha"};
+const TAREAS_PUBLICAS_URL = "https://primal-tareas.vercel.app"; // página pública de tareas de clientes (31 oct 2026): proyecto Vercel primal-tareas, carpeta publico/ (pendiente: dominio tareas.primalgrowth.co)
+function proyPublico(p){ return (p.publico===undefined || p.publico===null) ? p.tipo!=="interno" : !!p.publico; } // sale en la página pública salvo que se apague (los internos, apagados por defecto)
 
 function proyectos(){ return STATE.proyectos||[]; }
 function tareas(){ return STATE.tareas||[]; }
@@ -72,13 +74,14 @@ function renderTareas(){
   <div class="filters">
     <div class="seg">${["abiertas","hechas","todas"].map(f=>`<button data-tf="${f}" class="${T_F.estado===f?"active":""}">${f}</button>`).join("")}</div>
     <select id="t-resp"><option value="">Todos</option>${resps.map(r=>`<option ${T_F.resp===r?"selected":""}>${esc(r)}</option>`).join("")}</select>
-    <div class="seg">${[["fecha","por fecha"],["etapa","por etapa"]].map(([k,l])=>`<button data-tm="${k}" class="${T_F.modo===k?"active":""}">${l}</button>`).join("")}</div>
+    <div class="seg">${[["fecha","por fecha"],["etapa","por etapa"],["cliente","por cliente"]].map(([k,l])=>`<button data-tm="${k}" class="${T_F.modo===k?"active":""}">${l}</button>`).join("")}</div>
     ${T_F.proy?`<button class="btn xs ghost" onclick="T_F.proy='';render()">× ${esc((proyectos().find(p=>p.id===T_F.proy)||{}).nombre||"")}</button>`:""}
     <span class="spacer"></span>
+    <a class="btn sm ghost" href="${TAREAS_PUBLICAS_URL}" target="_blank" rel="noopener" title="La página de solo lectura con las tareas de todos los clientes">Página de clientes ↗</a>
     <button class="btn sm ghost" onclick="openAvisos()">Avisos al celular</button>
     <button class="btn sm gold" onclick="openTarea()">+ Tarea</button>
   </div>
-  <div class="panel">${!list.length?`<div class="empty" style="padding:22px">Nada por acá.</div>`:T_F.modo==="etapa"?renderPorEtapa(list):renderPorFecha(list)}</div>`;
+  <div class="panel">${!list.length?`<div class="empty" style="padding:22px">Nada por acá.</div>`:T_F.modo==="etapa"?renderPorEtapa(list):T_F.modo==="cliente"?renderPorCliente(list):renderPorFecha(list)}</div>`;
 
   $$("[data-tf]",el).forEach(b=>b.onclick=()=>{T_F.estado=b.dataset.tf;render();});
   $$("[data-tm]",el).forEach(b=>b.onclick=()=>{T_F.modo=b.dataset.tm;render();});
@@ -93,14 +96,14 @@ function proyCard(p){
     <b>${esc(p.nombre)}</b>
     <div class="cd">${n==null?`<span class="dim">sin evento</span>`:n<0?`<span class="dim">pasó hace ${-n} d</span>`:`<em>${n}</em><span>${n===1?"día":"días"} · ${dayLabel(p.evento)}${p.hora?" · "+esc(p.hora):""}</span>`}</div>
     <div class="bar"><i style="width:${pct}%"></i></div>
-    <small>${h} de ${ts.length} hechas${venc?` · <span class="bad">${venc} vencidas</span>`:""}${p0?` · ${p0} P0 abiertas`:""}</small>
+    <small>${h} de ${ts.length} hechas${venc?` · <span class="bad">${venc} vencidas</span>`:""}${p0?` · ${p0} P0 abiertas`:""}${proyPublico(p)?"":` · <span class="dim">fuera de la página pública</span>`}</small>
   </div>`;
 }
 function tRow(t){
   const p=proyDe(t), v=tVence(t), n=tFalta(t);
   return `<div class="t-row ${faltaCls(t)}" onclick="openTarea('${t.id}')">
     <button class="t-check ${t.estado==="hecho"?"on":""}" title="${t.estado==="hecho"?"Marcar pendiente":"Marcar hecha"}" onclick="event.stopPropagation();toggleTarea('${t.id}')"></button>
-    <div class="t-main"><b>${esc(t.titulo)}</b><small>${p&&!T_F.proy?`<span class="ember">${esc(p.cliente||p.nombre)}</span> · `:""}${esc(t.etapa||"")} · ${esc(t.resp||"—")}${t.estado==="progreso"?` · <span class="ok">en progreso</span>`:t.estado==="trabada"?` · <span class="bad">trabada</span>`:""}${t.link?` · <a href="${esc(t.link)}" target="_blank" onclick="event.stopPropagation()">entregable</a>`:""}</small></div>
+    <div class="t-main"><b>${esc(t.titulo)}</b><small>${p&&!T_F.proy?`<span class="ember">${esc(p.cliente||p.nombre)}</span> · `:""}${esc(t.etapa||"")} · ${esc(t.resp||"—")}${t.estado==="progreso"?` · <span class="ok">en progreso</span>`:t.estado==="trabada"?` · <span class="bad">trabada</span>`:""}${t.link?` · <a href="${esc(t.link)}" target="_blank" onclick="event.stopPropagation()">entregable</a>`:""}${t.oculta?` · <span class="dim">oculta en la página</span>`:""}</small></div>
     <span class="tag ${t.prio==="P0"?"warn":""}" title="${esc(T_PRIO[t.prio]||"")}">${esc(t.prio||"")}</span>
     <div class="t-due"><span>${v?dayLabel(v):"—"}</span><small>${t.estado==="hecho"?"hecha"+(t.hechaEl?" "+dayLabel(t.hechaEl):""):faltaLabel(n)}</small></div>
   </div>`;
@@ -116,6 +119,12 @@ function renderPorEtapa(list){
   const et=[...new Set(list.map(t=>(proyDe(t)?proyDe(t).nombre+" · ":"")+(t.etapa||"Sin etapa")))].sort();
   return et.map(e=>{ const rows=list.filter(t=>((proyDe(t)?proyDe(t).nombre+" · ":"")+(t.etapa||"Sin etapa"))===e); return `<h3 class="t-g">${esc(e)} <span class="sub">${rows.length}</span></h3>${rows.map(tRow).join("")}`; }).join("");
 }
+function clienteDe(t){ const p=proyDe(t); return p ? (p.cliente||p.nombre) : "Sin proyecto"; }
+function renderPorCliente(list){
+  const cl=[...new Set(list.map(clienteDe))].sort((a,b)=>a.localeCompare(b));
+  return cl.map(c=>{ const rows=list.filter(t=>clienteDe(t)===c), ab=rows.filter(tAbierta).length;
+    return `<h3 class="t-g">${esc(c)} <span class="sub">${ab} abiertas · ${rows.length-ab} hechas</span></h3>${rows.map(tRow).join("")}`; }).join("");
+}
 function renderTareasStrip(){
   const ab=tareas().filter(t=>tAbierta(t)&&tVence(t)); const v=ab.filter(t=>tFalta(t)<0).length, h=ab.filter(t=>tFalta(t)===0).length, m=ab.filter(t=>tFalta(t)===1).length;
   if(!v&&!h&&!m) return "";
@@ -129,7 +138,7 @@ async function toggleTarea(id){
   await saveState("tareas"); render(); toast(t.estado==="hecho"?"Hecha. Una menos.":"Vuelve a pendiente");
 }
 function openTarea(id){
-  const t=id?tareas().find(x=>x.id===id):{id:"",proyecto:T_F.proy||(proyectos()[0]||{}).id||"",etapa:"",area:"",titulo:"",detalle:"",resp:"Santi",prio:"P1",off:null,fecha:todayStr(),estado:"pendiente",link:"",notas:""};
+  const t=id?tareas().find(x=>x.id===id):{id:"",proyecto:T_F.proy||(proyectos()[0]||{}).id||"",etapa:"",area:"",titulo:"",detalle:"",resp:"Santi",prio:"P1",off:null,fecha:todayStr(),estado:"pendiente",link:"",notas:"",oculta:false};
   if(!t) return; const p=proyDe(t)||proyectos().find(x=>x.id===t.proyecto);
   const modo=tieneOff(t)?"off":"fecha";
   openModal({ title: id?`Tarea · <i>${esc(clipTxt(t.titulo,40))}</i>`:"Tarea nueva", del:!!id, body:`
@@ -145,7 +154,8 @@ function openTarea(id){
     <div class="f2"><div class="f"><label>Estado</label><select id="t-est">${Object.entries(T_ESTADOS).map(([k,l])=>`<option value="${k}" ${t.estado===k?"selected":""}>${l}</option>`).join("")}</select></div>
       <div class="f"><label>Entregable (link)</label><input id="t-link" class="mono" value="${esc(t.link||"")}" placeholder="https://…" /></div></div>
     <div class="f"><label>Detalle</label><textarea id="t-det">${esc(t.detalle||"")}</textarea></div>
-    <div class="f"><label>Notas (si está trabada, por qué)</label><textarea id="t-not">${esc(t.notas||"")}</textarea></div>`,
+    <div class="f"><label>Notas (si está trabada, por qué)</label><textarea id="t-not">${esc(t.notas||"")}</textarea></div>
+    <label class="mini" style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:.04em;font-size:12px;color:var(--muted)"><input type="checkbox" id="t-oc" ${t.oculta?"checked":""}/> No mostrar en la página pública de clientes (el detalle y las notas nunca salen)</label>`,
     onOpen(){
       const sync=()=>{ const m=pickVal("#t-modo"); $("#w-off").style.opacity=m==="off"?1:.35; $("#w-fecha").style.opacity=m==="fecha"?1:.35;
         const pr=proyectos().find(x=>x.id===$("#t-proy").value), o=$("#t-off").value; $("#t-off-lbl").textContent = m==="off" ? (pr&&pr.evento ? (o!==""?`→ ${dayLabel(addDays(pr.evento,Number(o)))} (${offLabel(o)})`:"") : "este proyecto no tiene fecha de evento: usá fecha fija") : ""; };
@@ -159,7 +169,7 @@ function openTarea(id){
       const est=$("#t-est").value;
       const patch={titulo, proyecto:$("#t-proy").value, resp:$("#t-res").value, etapa:$("#t-eta").value.trim(), area:$("#t-area").value.trim(), prio:pickVal("#t-prio")||"P1",
         off:m==="off"?Number($("#t-off").value):null, fecha:m==="fecha"?$("#t-fecha").value:"", estado:est, link:$("#t-link").value.trim(), detalle:$("#t-det").value.trim(), notas:$("#t-not").value.trim(),
-        hechaEl: est==="hecho" ? (t.hechaEl||todayStr()) : ""};
+        hechaEl: est==="hecho" ? (t.hechaEl||todayStr()) : "", oculta:$("#t-oc").checked};
       if(id) Object.assign(t,patch); else STATE.tareas.push(Object.assign({id:uid()},patch));
       await saveState("tareas"); render();
     },
@@ -171,7 +181,7 @@ function plantillaDe(tipo){
   return (T_SEED.tareas[src]||[]).filter(r=>r[6]!==null).map(r=>{ const [etapa,area,titulo,detalle,resp,prio,off]=r; return {etapa,area,titulo,detalle,resp:["Sebas","Amelia","Estiven"].includes(resp)?"Cliente":resp,prio,off}; });
 }
 function openProyecto(id){
-  const p=id?proyectos().find(x=>x.id===id):{id:"",nombre:"",cliente:"",tipo:"pago",evento:"",hora:"",notas:""};
+  const p=id?proyectos().find(x=>x.id===id):{id:"",nombre:"",cliente:"",tipo:"pago",evento:"",hora:"",notas:"",publico:true};
   if(!p) return; const n=id?tareas().filter(t=>t.proyecto===id).length:0;
   openModal({ title:id?`Proyecto · <i>${esc(p.nombre)}</i>`:"Proyecto nuevo", del:!!id, body:`
     <div class="f2"><div class="f"><label>Nombre</label><input id="p-nom" value="${esc(p.nombre)}" placeholder="Webinar de…" /></div>
@@ -182,11 +192,12 @@ function openProyecto(id){
     ${id?`<div class="mini" style="text-transform:none;letter-spacing:.04em;font-size:12px;color:var(--muted)">Si cambiás la fecha del evento, las ${tareas().filter(t=>t.proyecto===id&&tieneOff(t)).length} tareas atadas al evento se mueven solas. Las de fecha fija no.</div>`
       :`<div class="f"><label>Arrancar con plantilla</label><div class="pick" id="p-plan"><button type="button" data-v="si" class="on">Sí, cargar la checklist del tipo</button><button type="button" data-v="no">Vacío</button></div></div>`}
     <div class="f"><label>Notas</label><textarea id="p-not">${esc(p.notas||"")}</textarea></div>
+    <label class="mini" style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:.04em;font-size:12px;color:var(--muted)"><input type="checkbox" id="p-pub" ${proyPublico(p)?"checked":""}/> Mostrar en la página pública de clientes (${TAREAS_PUBLICAS_URL.replace(/^https?:\/\//,"")}); las notas del proyecto nunca salen</label>
     ${id?`<label class="mini" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="p-arch" ${p.archivado?"checked":""}/> archivar (deja de verse y de avisar)</label>`:""}`,
     onOpen(){ pickInit("#p-tipo"); if(!id) pickInit("#p-plan"); },
     async onSave(){
       const nombre=$("#p-nom").value.trim(); if(!nombre){ toast("Falta el nombre"); return false; }
-      const patch={nombre, cliente:$("#p-cli").value.trim(), tipo:pickVal("#p-tipo")||"pago", evento:$("#p-ev").value, hora:$("#p-hora").value.trim(), notas:$("#p-not").value.trim()};
+      const patch={nombre, cliente:$("#p-cli").value.trim(), tipo:pickVal("#p-tipo")||"pago", evento:$("#p-ev").value, hora:$("#p-hora").value.trim(), notas:$("#p-not").value.trim(), publico:$("#p-pub").checked};
       if(id){ const antes=p.evento; Object.assign(p,patch,{archivado:$("#p-arch").checked}); await saveState("proyectos"); if(antes&&p.evento&&antes!==p.evento) toast(`Evento movido ${diasEntre(antes,p.evento)>0?"+":""}${diasEntre(antes,p.evento)} d: las tareas se movieron con él`); }
       else { const np=Object.assign({id:uid(),archivado:false},patch); STATE.proyectos.push(np);
         if(pickVal("#p-plan")==="si"){ const pl=plantillaDe(np.tipo); if(pl.length && !np.evento){ toast("Para usar la plantilla hace falta la fecha del evento"); STATE.proyectos.pop(); return false; }
