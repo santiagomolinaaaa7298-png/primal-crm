@@ -42,7 +42,7 @@ async function seedTareas(){
     const [etapa,area,titulo,detalle,resp,prio,off,fecha]=r;
     STATE.tareas.push({id, proyecto:pid, etapa, area, titulo, detalle, resp, prio, off, fecha:fecha||"", estado:"pendiente", link:"", notas:"", hechaEl:""});
   }));
-  (T_SEED.cambios||[]).filter(c=>(c.v||0)>seedPrev).forEach(c=>{ const t=STATE.tareas.find(x=>x.id===c.id); if(!t) return;
+  (T_SEED.cambios||[]).filter(c=>(c.v||0)>seedPrev).forEach(c=>{ const t=c.proyecto ? STATE.proyectos.find(x=>x.id===c.proyecto) : STATE.tareas.find(x=>x.id===c.id); if(!t) return;
     Object.assign(t, c.set||{}); Object.entries(c.sumar||{}).forEach(([k,v])=>{ t[k] = t[k] ? t[k]+" · "+v : v; }); });
   STATE.config.seedTareas = T_SEED.version;
   await saveState("proyectos"); await saveState("tareas"); await saveState("config"); saveLocal();

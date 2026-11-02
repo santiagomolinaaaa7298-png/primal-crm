@@ -8,9 +8,11 @@
    v3 (31 oct): proyecto Santino Lofeudo con el checklist completo y lo acordado en la llamada del 31 oct.
    v4 (2 nov): Santino, grupal con Naza: 29 tareas nuevas y "cambios" a tareas existentes (se aplican una sola vez,
       la versión que los trae; "set" reemplaza campos y "sumar" agrega texto al final).
+   v5 (2 nov): el webinar 1 de Santino pasa al martes 17 nov (el 19 es de Sebas). Un cambio con "proyecto" toca el proyecto;
+      lo atado a la adquisición (contenido el 6, landing el 7, registro el 9, nutrición el 10) no se mueve.
    ============================================================ */
 const T_SEED = {
-  version: 4,
+  version: 5,
   quitar: ["estiven-vsl"],
   cambios: [
     {"id": "santino-17", "set": {"estado": "hecho", "hechaEl": "2026-11-02"}, "sumar": {"detalle": "Hecho 2 nov: OFERTAS-SANTINO.md + docx. v2 cuando Santino responda la escalera de Naza."}, "v": 4},
@@ -29,7 +31,23 @@ const T_SEED = {
     {"id": "santino-27", "sumar": {"detalle": "Sin signo $ ni 'dólares' en subtítulos."}, "v": 4},
     {"id": "santino-21", "sumar": {"detalle": "2 nov: Naza propone en su lugar un low ticket de ~100 solo comunidad, sin clases; esperar la decisión."}, "v": 4},
     {"id": "santino-62", "set": {"estado": "hecho", "hechaEl": "2026-11-02"}, "v": 4},
-    {"id": "santino-63", "set": {"estado": "hecho", "hechaEl": "2026-11-02"}, "v": 4}
+    {"id": "santino-63", "set": {"estado": "hecho", "hechaEl": "2026-11-02"}, "v": 4},
+    {"v": 5, "proyecto": "santino", "set": {"evento": "2026-11-17", "notas": "Trader de 18 años en Dubái, 30 % del profit. Meta: 100K al mes (50K evergreen + 50K webinars). Webinar 1 martes 17 nov (movido del jueves 19 el 2 nov: el 19 es de Sebas), 20:00 España = 16:00 Argentina, 14:00 Colombia, 13:00 México. 100 % orgánico: nada de pauta hasta facturar 30K al mes con orgánico (Santino, 31 oct). Adquisición del 9 al 16 nov. Fuentes: santino/BASES-WEBINAR-1.md, FATHOM-NAZA-2-NOV.md, ROADMAP-SANTINO.md, webinars/CHECKLIST-NOVIEMBRE.md."}},
+    {"v": 5, "id": "santino-39", "set": {"off": -10}},
+    {"v": 5, "id": "santino-40", "set": {"off": -10}},
+    {"v": 5, "id": "santino-41", "set": {"off": -8}},
+    {"v": 5, "id": "santino-42", "set": {"off": -8}},
+    {"v": 5, "id": "santino-44", "set": {"off": -11}},
+    {"v": 5, "id": "santino-45", "set": {"off": -7}},
+    {"v": 5, "id": "santino-77", "set": {"off": -11}},
+    {"v": 5, "id": "santino-78", "set": {"off": -11}},
+    {"v": 5, "id": "santino-79", "set": {"off": -8}},
+    {"v": 5, "id": "santino-80", "set": {"off": -8}},
+    {"v": 5, "id": "santino-45", "set": {"titulo": "Nutrición escrita completa: grupo e historias del 9 al 17"}},
+    {"v": 5, "id": "santino-44", "set": {"titulo": "Secuencia de historias y recursos con 'esto es el 1 % de lo que explico en la clase del 17'"}},
+    {"v": 5, "id": "santino-41", "sumar": {"detalle": "2 nov: el webinar pasa al mar 17; adquisición del 9 al 16."}},
+    {"v": 5, "id": "santino-42", "set": {"titulo": "Registro abierto (lunes 9 nov, 8 días de adquisición hasta el 16)"}},
+    {"v": 5, "id": "santino-46", "sumar": {"detalle": "Martes 17: 20:00 España = 16:00 Argentina, 14:00 Colombia, 13:00 México."}}
   ],
   proyectos: [
     { id:"sebas-nov", nombre:"Webinar Sebas Ramos", cliente:"Sebas", tipo:"pago", evento:"2026-11-19", hora:"20:00",
@@ -38,8 +56,8 @@ const T_SEED = {
       notas:"Fecha PROPUESTA (jueves 10 dic): confirmarla con Amelia y moverla acá; todas las fechas se recalculan solas. Orgánico: no cuenta para ads. Primero rearmar el equipo de ventas y el plan de envíos." },
     { id:"estiven-dic", nombre:"Webinar Estiven", cliente:"Estiven", tipo:"pago", evento:"2026-12-03", hora:"20:00",
       notas:"Otro webinar (no VSL funnel). Fecha PROPUESTA: jueves 3 dic, 8 p. m. Colombia: confirmarla con Estiven y moverla acá; todo se recalcula. Guiones antes del 15 nov para no chocar con la semana del vivo de Sebas. Lo único de VSL que falta es el VSL de chat (va primero). Antes, ordenar ventas: el 22 oct el triaje llamó 16-19 h tarde a los calificados y el CRM quedó con 0 llamadas y 0 pagos." },
-    { id:"santino", nombre:"Santino Lofeudo · evergreen + webinar 1", cliente:"Santino", tipo:"organico", evento:"2026-11-19", hora:"20:00",
-      notas:"Trader de 18 años en Dubái, 30 % del profit. Meta: 100K al mes (50K evergreen + 50K webinars). Webinar 1 jueves 19 nov, 100 % orgánico: nada de pauta hasta facturar 30K al mes con orgánico (Santino, 31 oct). Adquisición 10 días (9 al 19 nov). Fuentes: santino/LLAMADA-31-OCT.md, ROADMAP-SANTINO.md, Miro Roadmap · Santino Lofeudo, calculadora Ruta a 100K." },
+    { id:"santino", nombre:"Santino Lofeudo · evergreen + webinar 1", cliente:"Santino", tipo:"organico", evento:"2026-11-17", hora:"20:00",
+      notas:"Trader de 18 años en Dubái, 30 % del profit. Meta: 100K al mes (50K evergreen + 50K webinars). Webinar 1 martes 17 nov (movido del jueves 19 el 2 nov: el 19 es de Sebas), 20:00 España = 16:00 Argentina, 14:00 Colombia, 13:00 México. 100 % orgánico: nada de pauta hasta facturar 30K al mes con orgánico (Santino, 31 oct). Adquisición del 9 al 16 nov. Fuentes: santino/LLAMADA-31-OCT.md, ROADMAP-SANTINO.md, Miro Roadmap · Santino Lofeudo, calculadora Ruta a 100K." },
     { id:"primal", nombre:"Primal Growth · mi negocio", cliente:"Primal", tipo:"interno", evento:"", hora:"",
       notas:"Lo tuyo: la meta de 30K de profit al mes, el análisis financiero y los sistemas que te mantienen al día." }
   ],
