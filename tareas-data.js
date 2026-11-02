@@ -6,10 +6,31 @@
    Se carga una vez por versión (config.seedTareas); lo que edites en la app no se pisa.
    v2 (26 oct): Estiven ya no hace VSL funnel sino otro webinar; "quitar" borra el proyecto viejo.
    v3 (31 oct): proyecto Santino Lofeudo con el checklist completo y lo acordado en la llamada del 31 oct.
+   v4 (2 nov): Santino, grupal con Naza: 29 tareas nuevas y "cambios" a tareas existentes (se aplican una sola vez,
+      la versión que los trae; "set" reemplaza campos y "sumar" agrega texto al final).
    ============================================================ */
 const T_SEED = {
-  version: 3,
+  version: 4,
   quitar: ["estiven-vsl"],
+  cambios: [
+    {"id": "santino-17", "set": {"estado": "hecho", "hechaEl": "2026-11-02"}, "sumar": {"detalle": "Hecho 2 nov: OFERTAS-SANTINO.md + docx. v2 cuando Santino responda la escalera de Naza."}, "v": 4},
+    {"id": "santino-39", "set": {"estado": "hecho", "hechaEl": "2026-11-02"}, "sumar": {"detalle": "v1 el 2 nov en BASES-WEBINAR-1.md."}, "v": 4},
+    {"id": "santino-40", "set": {"off": -12}, "sumar": {"detalle": "Naza 2 nov: qué vas a ver 1-2-3, regalos visibles, FAQ, una pregunta de calificación (pruebas compradas en 3 meses), botón fijo 'Quiero mi lugar', testimonios en una fila con cara, nombre y resultado, sin signo $, carga rápida. BASES-WEBINAR-1 sección 10."}, "v": 4},
+    {"id": "santino-42", "set": {"titulo": "Registro abierto (lunes 9 nov, 10 días de adquisición)", "off": -10}, "v": 4},
+    {"id": "santino-43", "set": {"off": -5}, "sumar": {"detalle": "Lista 5 días antes del vivo (Naza a Lucas). Pitch del Premium y upsell al VIP."}, "v": 4},
+    {"id": "santino-44", "set": {"off": -13}, "sumar": {"detalle": "2 nov: lista con el contenido de adquisición, 3 días antes de arrancar."}, "v": 4},
+    {"id": "santino-45", "set": {"titulo": "Nutrición escrita completa: grupo e historias del 9 al 19", "off": -9, "resp": "Claude"}, "sumar": {"detalle": "Escrita a más tardar el 2º día de adquisición (Naza). La manda el equipo de ventas."}, "v": 4},
+    {"id": "santino-28", "sumar": {"detalle": "2 nov: el único CTA en historias es el del webinar."}, "v": 4},
+    {"id": "santino-37", "sumar": {"detalle": "2 nov: número argentino de Personal + ManyChat con WhatsApp API (tarea nueva del 5 nov)."}, "v": 4},
+    {"id": "santino-30", "sumar": {"detalle": "2 nov: el recurso es un video concreto de YouTube."}, "v": 4},
+    {"id": "santino-1", "sumar": {"detalle": "2 nov: Naza recomienda VIP y Black a 4 meses, Black 10K, Diamond anual 30K+, low ticket ~100 (tarea nueva del 4 nov)."}, "v": 4},
+    {"id": "santino-11", "sumar": {"detalle": "2 nov (Naza): durante el webinar, landing; fuera, YouTube o el opt-in del próximo."}, "v": 4},
+    {"id": "santino-26", "sumar": {"detalle": "2 nov: si se aprueba, arranca de cero con una cuenta nueva."}, "v": 4},
+    {"id": "santino-27", "sumar": {"detalle": "Sin signo $ ni 'dólares' en subtítulos."}, "v": 4},
+    {"id": "santino-21", "sumar": {"detalle": "2 nov: Naza propone en su lugar un low ticket de ~100 solo comunidad, sin clases; esperar la decisión."}, "v": 4},
+    {"id": "santino-62", "set": {"estado": "hecho", "hechaEl": "2026-11-02"}, "v": 4},
+    {"id": "santino-63", "set": {"estado": "hecho", "hechaEl": "2026-11-02"}, "v": 4}
+  ],
   proyectos: [
     { id:"sebas-nov", nombre:"Webinar Sebas Ramos", cliente:"Sebas", tipo:"pago", evento:"2026-11-19", hora:"20:00",
       notas:"Webinar desde cero. Jueves 19 nov (el CONTEXTO decía 12: confirmar con Sebas y anotarlo). 10 días de adquisición: ads corriendo desde el lun 9, campaña y edición listas el dom 8, guiones el jue 5, equipo de ventas armado el sáb 7. Acuerdo: 50 % del profit, sin upfront." },
@@ -239,7 +260,37 @@ const T_SEED = {
       ["5 · Cadencia","Contenido orgánico","Episodio especial: balance del año y del reto","","Santino","P2",null,"2026-12-28"],
       ["5 · Cadencia","Funnel","Webinar semanal desde el jueves 8 de enero","","Santino","P1",null,"2027-01-08"],
       ["5 · Cadencia","Estrategia","Abrir inner circle y done with you a los alumnos actuales","Escalera Limitless, escalones 3 y 4.","Santi","P2",null,"2027-01-15"],
-      ["5 · Cadencia","Contenido orgánico","Bootcamp formal como cierre del reto","","Santino","P2",null,"2027-02-01"]
+      ["5 · Cadencia","Contenido orgánico","Bootcamp formal como cierre del reto","","Santino","P2",null,"2027-02-01"],
+
+      ["0 · Decisiones","Estrategia","Aprobar las bases del webinar 1 (promesa, narrativa, avatares, creencias, regalos, calendario)","santino/BASES-WEBINAR-1.md. De esto cuelgan la landing y el contenido de adquisición.","Santi","P0",null,"2026-11-02"],
+      ["0 · Decisiones","Contenido orgánico","Decidir si la serie arranca de cero con una cuenta nueva (prueba de 50) en vez de desde los 80K","Naza 2 nov: arrancar en 80K deja sin recorrido y el avatar no lo puede seguir. Antes de publicar el episodio 1.","Santi","P0",null,"2026-11-03"],
+      ["0 · Decisiones","Estrategia","Responder la escalera de Naza: VIP y Black a 4 meses, Black 10K (recomendado 12K), Diamond anual 30K+ con eventos, low ticket ~100 sin clases","FATHOM-NAZA-2-NOV decisión 3. El low ticket reemplazaría al producto de 400.","Santino","P0",null,"2026-11-04"],
+      ["0 · Decisiones","Ventas","Decidir qué se vende en el webinar: Premium como principal y VIP o Black por llamada de upsell","Lo que recomendó Naza cuando el 90 % no paga el caro (26 agendas del webinar improvisado con cuentas de 100-200).","Santi","P0",null,"2026-11-05"],
+      ["1 · Ya","Estrategia","Accionables de la grupal con Naza del 2 nov cargados en el CRM","santino/FATHOM-NAZA-2-NOV.md","Claude","P0",null,"2026-11-02"],
+      ["1 · Ya","Estrategia","Bases del webinar 1 v1","santino/BASES-WEBINAR-1.md","Claude","P0",null,"2026-11-02"],
+      ["1 · Ya","Sistemas","Mandar a Santino los pedidos nuevos (PEDIR-A-SANTINO sección E)","DNI y dirección para Personal, IG secundario, canal técnico, Facebook viejo de alguien de confianza, dLocal Go, escalera de Naza.","Santi","P0",null,"2026-11-02"],
+      ["1 · Ya","Contenido orgánico","Meta safe en todo: sin signo $ ni 'dólares' en subtítulos y pantallas (se dice K), gráficos borroneados en lo de adquisición","Naza 2 nov. Vale también para el orgánico.","Editor","P0",null,"2026-11-02"],
+      ["1 · Ya","Sistemas","Llamar a Personal Argentina para el número del equipo (DNI argentino + dirección de los padres)","Destraba la línea business de WhatsApp y ManyChat.","Santino","P0",null,"2026-11-03"],
+      ["2 · YouTube y contenido","Contenido orgánico","Historias: sacar los CTAs a Calendly y 'escribime'; el único CTA de historias es el del webinar","Naza 2 nov.","Santino","P1",null,"2026-11-03"],
+      ["2 · YouTube y contenido","Contenido orgánico","Banco de virales: 20 videos de canales chicos que superan 30 veces su media, adaptados a Santino","No elegir virales de TJR ni de cuentas grandes (Naza). Sesión de marketing.","Claude","P1",null,"2026-11-03"],
+      ["2 · YouTube y contenido","Contenido orgánico","Guiones de virales de alcance para el canal principal","'Un trader de 19 años contra 10 profesores', 'un pibito en Dubái'. 70-80 % alcance, 20-30 % VSL.","Claude","P1",null,"2026-11-04"],
+      ["2 · YouTube y contenido","Funnel","ManyChat: cada palabra clave lleva a un video concreto de YouTube, después pausa, audio y setter","Los comentarios de IG también se responden con el link al video del tema, no al canal.","Claude","P1",null,"2026-11-04"],
+      ["2 · YouTube y contenido","Contenido orgánico","Crear el canal técnico de YouTube: bias y recap diarios, pre y post sesión","El principal queda para lo viral, la serie y el BCL anclado. Todo el tráfico va al mismo webinar.","Santino","P1",null,"2026-11-05"],
+      ["2 · YouTube y contenido","Contenido orgánico","Crear el IG secundario de Santino: mismo contenido en colaboración y setting desde ahí","Preventivo por baneos. Las dos cuentas y TikTok llevan al YouTube viral.","Santino","P1",null,"2026-11-05"],
+      ["2 · YouTube y contenido","Contenido orgánico","Canal principal: BCL anclado + playlists 'Casos de éxito' y 'Data sobre trading'","Como Eric Alanis: casos en otro canal pero visibles en la portada del principal.","Santi","P1",null,"2026-11-06"],
+      ["3 · Ventas","Funnel","WhatsApp Business del equipo con el número argentino, conectado a ManyChat (WhatsApp API)","No usar el número de Santino. No se cierra el WhatsApp del celular y todo el equipo atiende asignándose leads.","Santi","P0",null,"2026-11-05"],
+      ["3 · Ventas","Ventas","Abrir dLocal Go (cuotas con Mercado Pago) además de Whop","Según Naza: 6 cuotas con ~30 % de recargo en Argentina, hasta el límite de la tarjeta; piden LLC. Tener todos los medios de pago.","Santino","P1",null,"2026-11-09"],
+      ["3 · Ventas","Ventas","Setter: 50 a 100 chats por día + 100 a 200 recontactos a leads viejos cuando no tiene otra cosa","Base para el reporte diario.","Equipo de ventas","P1",null,"2026-11-09"],
+      ["4 · Webinar 1","Contenido orgánico","Contenido de adquisición listo y editado: reels con CTA, historias de los primeros 5 días, CTA de episodios y comentario fijado","3 días antes de arrancar la adquisición (Naza a Lucas).","Claude","P0",-13,null],
+      ["4 · Webinar 1","Funnel","Regalos del webinar listos: checklist de primera prueba, 3 reglas de riesgo, journal, video 'De 0 a tu primer retiro'","Que parezcan reales, no IA. BASES-WEBINAR-1 sección 8.","Claude","P0",-13,null],
+      ["4 · Webinar 1","Ventas","Contactar la base vieja: mensaje grupal con la landing en WhatsApp y Telegram, después 1 a 1 a los registrados","","Equipo de ventas","P1",-10,null],
+      ["4 · Webinar 1","Ventas","Regla para leads que preguntan por la mentoría antes del webinar: si están listos se les vende, si no a la clase","Naza 2 nov. El closer hace un segundo chequeo.","Equipo de ventas","P1",-10,null],
+      ["4 · Webinar 1","Funnel","Post webinar listo: 3 días de mensajes, replay 48 h, dos links de WhatsApp (COMPRA y REGALOS)","Listo 2 días antes del vivo. Se atiende primero a los de compra.","Claude","P0",-2,null],
+      ["4 · Webinar 1","Funnel","Durante el vivo: equipo en segunda pantalla con el chat; Santino no lee el chat","","Santi","P1",0,null],
+      ["4 · Webinar 1","Ventas","Llamadas de upsell al VIP o Black para los que pagaron Premium y tienen potencial","Pregunta de calificación: 3 o más pruebas compradas = lista de upsell.","Equipo de ventas","P1",3,null],
+      ["5 · Cadencia","Ads","Estructura de Meta para la pauta futura: Facebook viejo de alguien real, fanpage y Meta Business desde la secundaria","Sin pauta hasta 30K al mes orgánico; se deja listo.","Santi","P2",null,"2026-11-23"],
+      ["5 · Cadencia","Funnel","Funnels nuevos: DM optimizado, preventa del webinar y post webinar con callers","Naza: no ahora; después del webinar 1.","Santi","P2",null,"2026-11-25"],
+      ["5 · Cadencia","Finanzas","Si se suma alguien al equipo de Santiago para esta cuenta: negociar que cobre del negocio de Santino","Naza: fijo 500 o 3 % si aprende; closer 10 %; director 7-15 % del negocio.","Santi","P2",null,"2026-11-23"]
     ],
     "primal": [
       ["Sistemas","Sistemas","Instalar ntfy en el celular y suscribirte a tu canal de avisos","Tareas → Avisos: ahí está el canal y el botón de prueba.","Santi","P0",null,"2026-10-27"],

@@ -34,6 +34,7 @@ async function seedTareas(){
   if(!STATE.config.ntfy){ STATE.config.ntfy = NTFY_TOPIC; STATE.config.avisosDias=[7,3,1]; await saveState("config"); }
   if(!STATE.config.appUrl && location.protocol==="https:"){ STATE.config.appUrl = location.origin+"/"; await saveState("config"); } // el aviso del cron abre esta dirección
   if(typeof T_SEED==="undefined" || (Number(STATE.config.seedTareas)||0) >= T_SEED.version) return;
+  const seedPrev=Number(STATE.config.seedTareas)||0;
   (T_SEED.quitar||[]).forEach(pid=>{ STATE.proyectos=STATE.proyectos.filter(p=>p.id!==pid); STATE.tareas=STATE.tareas.filter(t=>t.proyecto!==pid); });
   T_SEED.proyectos.forEach(p=>{ if(!STATE.proyectos.some(x=>x.id===p.id)) STATE.proyectos.push(Object.assign({archivado:false}, p)); });
   Object.entries(T_SEED.tareas).forEach(([pid, rows])=>rows.forEach((r,i)=>{
@@ -41,6 +42,8 @@ async function seedTareas(){
     const [etapa,area,titulo,detalle,resp,prio,off,fecha]=r;
     STATE.tareas.push({id, proyecto:pid, etapa, area, titulo, detalle, resp, prio, off, fecha:fecha||"", estado:"pendiente", link:"", notas:"", hechaEl:""});
   }));
+  (T_SEED.cambios||[]).filter(c=>(c.v||0)>seedPrev).forEach(c=>{ const t=STATE.tareas.find(x=>x.id===c.id); if(!t) return;
+    Object.assign(t, c.set||{}); Object.entries(c.sumar||{}).forEach(([k,v])=>{ t[k] = t[k] ? t[k]+" · "+v : v; }); });
   STATE.config.seedTareas = T_SEED.version;
   await saveState("proyectos"); await saveState("tareas"); await saveState("config"); saveLocal();
 }
