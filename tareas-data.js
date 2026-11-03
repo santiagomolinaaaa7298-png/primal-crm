@@ -10,9 +10,11 @@
       la versión que los trae; "set" reemplaza campos y "sumar" agrega texto al final).
    v5 (2 nov): el webinar 1 de Santino pasa al martes 17 nov (el 19 es de Sebas). Un cambio con "proyecto" toca el proyecto;
       lo atado a la adquisición (contenido el 6, landing el 7, registro el 9, nutrición el 10) no se mueve.
+   v6 (2 nov): checklist de los 3 webinars de noviembre. Estiven repite el webinar el jueves 12 nov (proyecto nuevo
+      estiven-nov; el de diciembre se archiva) y Santino suma lo de la llamada del 2 nov (ads desde otra cuenta, número de Dubái).
    ============================================================ */
 const T_SEED = {
-  version: 5,
+  version: 6,
   quitar: ["estiven-vsl"],
   cambios: [
     {"id": "santino-17", "set": {"estado": "hecho", "hechaEl": "2026-11-02"}, "sumar": {"detalle": "Hecho 2 nov: OFERTAS-SANTINO.md + docx. v2 cuando Santino responda la escalera de Naza."}, "v": 4},
@@ -47,7 +49,21 @@ const T_SEED = {
     {"v": 5, "id": "santino-44", "set": {"titulo": "Secuencia de historias y recursos con 'esto es el 1 % de lo que explico en la clase del 17'"}},
     {"v": 5, "id": "santino-41", "sumar": {"detalle": "2 nov: el webinar pasa al mar 17; adquisición del 9 al 16."}},
     {"v": 5, "id": "santino-42", "set": {"titulo": "Registro abierto (lunes 9 nov, 8 días de adquisición hasta el 16)"}},
-    {"v": 5, "id": "santino-46", "sumar": {"detalle": "Martes 17: 20:00 España = 16:00 Argentina, 14:00 Colombia, 13:00 México."}}
+    {"v": 5, "id": "santino-46", "sumar": {"detalle": "Martes 17: 20:00 España = 16:00 Argentina, 14:00 Colombia, 13:00 México."}},
+    {"v": 6, "proyecto": "estiven-dic", "set": {"archivado": true, "notas": "Archivado el 2 nov: Estiven repite el webinar el jueves 12 nov (proyecto Webinar Estiven · 12 nov)."}},
+    {"v": 6, "proyecto": "santino", "set": {"tipo": "pago", "notas": "Trader de 18 años en Dubái, 30 % del profit. Meta: 100K al mes (50K evergreen + 50K webinars); meta de noviembre ~30K. Webinar 1 martes 17 nov, 20:00 España = 16:00 Argentina, 14:00 Colombia, 13:00 México. 2 nov: SÍ hay ads, desde otra cuenta publicitaria y a la landing (sin follow-me); adquisición 10 días desde el sáb 7. Número de Dubái en vez del argentino; mientras tanto, solo Calendly en los videos. Fuentes: santino/ROADMAP-SANTINO.md, REELS-20-IDEAS-3-NOV.md, FLUJO-MANYCHAT-TRADING.md, webinars/CHECKLIST-NOVIEMBRE.md."}},
+    {"v": 6, "id": "santino-4", "sumar": {"detalle": "2 nov: ya no es 100 % orgánico; hay ads desde otra cuenta a la landing."}},
+    {"v": 6, "id": "santino-60", "set": {"estado": "hecho", "hechaEl": "2026-11-02"}, "sumar": {"detalle": "2 nov: VIP y Black a 4 meses. Whop: 250 × 6 cuotas o 1.500 pago único. Diamante ~30K con 2 eventos presenciales, más adelante."}},
+    {"v": 6, "id": "santino-66", "set": {"estado": "hecho", "hechaEl": "2026-11-02"}, "sumar": {"detalle": "Sin efecto el 2 nov: no se pudo activar; va un número de Dubái."}},
+    {"v": 6, "id": "santino-74", "set": {"titulo": "WhatsApp Business del equipo con el número de Dubái, conectado a ManyChat (WhatsApp API)"}, "sumar": {"detalle": "2 nov: cuando esté, los links de los videos pasan de Calendly a WhatsApp con texto ya escrito."}},
+    {"v": 6, "id": "santino-71", "sumar": {"detalle": "2 nov: lo abre Santino y le da acceso de administrador a Santiago. Ahí va el live trading y el análisis de los trades."}},
+    {"v": 6, "id": "santino-24", "sumar": {"detalle": "2 nov: Santino se lo manda al editor y se sube el mar 3; después pasa a destacado y avance del canal."}},
+    {"v": 6, "id": "santino-29", "sumar": {"detalle": "2 nov: 6 videos por día o una app que suba a todas las redes."}},
+    {"v": 6, "id": "santino-84", "set": {"titulo": "Cuenta publicitaria nueva, fanpage, píxel y verificación (la cuenta principal no sirve para ads)", "prio": "P0", "fecha": "2026-11-03", "off": null}, "sumar": {"detalle": "Adelantado el 2 nov: hay ads para el webinar del 17."}},
+    {"v": 6, "id": "sebas-nov-1", "sumar": {"detalle": "2 nov: mandarle MENSAJE-FECHAS.md y cerrar mañana mar 3 junto con oferta, presupuesto y setter."}},
+    {"v": 6, "id": "santino-87", "set": {"estado": "hecho", "hechaEl": "2026-11-02"}},
+    {"v": 6, "id": "santino-88", "set": {"estado": "hecho", "hechaEl": "2026-11-02"}},
+    {"v": 6, "id": "santino-89", "set": {"estado": "hecho", "hechaEl": "2026-11-02"}}
   ],
   proyectos: [
     { id:"sebas-nov", nombre:"Webinar Sebas Ramos", cliente:"Sebas", tipo:"pago", evento:"2026-11-19", hora:"20:00",
@@ -56,6 +72,8 @@ const T_SEED = {
       notas:"Fecha PROPUESTA (jueves 10 dic): confirmarla con Amelia y moverla acá; todas las fechas se recalculan solas. Orgánico: no cuenta para ads. Primero rearmar el equipo de ventas y el plan de envíos." },
     { id:"estiven-dic", nombre:"Webinar Estiven", cliente:"Estiven", tipo:"pago", evento:"2026-12-03", hora:"20:00",
       notas:"Otro webinar (no VSL funnel). Fecha PROPUESTA: jueves 3 dic, 8 p. m. Colombia: confirmarla con Estiven y moverla acá; todo se recalcula. Guiones antes del 15 nov para no chocar con la semana del vivo de Sebas. Lo único de VSL que falta es el VSL de chat (va primero). Antes, ordenar ventas: el 22 oct el triaje llamó 16-19 h tarde a los calificados y el CRM quedó con 0 llamadas y 0 pagos." },
+    { id:"estiven-nov", nombre:"Webinar Estiven · 12 nov", cliente:"Estiven", tipo:"pago", evento:"2026-11-12", hora:"20:00",
+      notas:"Se repite el webinar del 22 oct sin cambios: presentación, landing, thank you, nutrición, recordatorios, equipo y pre-call ya existen. El trabajo es cambiar fechas y producir los ads que faltan. Adquisición prendida mar 3 o mié 4. Fuente: webinars/CHECKLIST-NOVIEMBRE.md." },
     { id:"santino", nombre:"Santino Lofeudo · evergreen + webinar 1", cliente:"Santino", tipo:"organico", evento:"2026-11-17", hora:"20:00",
       notas:"Trader de 18 años en Dubái, 30 % del profit. Meta: 100K al mes (50K evergreen + 50K webinars). Webinar 1 martes 17 nov (movido del jueves 19 el 2 nov: el 19 es de Sebas), 20:00 España = 16:00 Argentina, 14:00 Colombia, 13:00 México. 100 % orgánico: nada de pauta hasta facturar 30K al mes con orgánico (Santino, 31 oct). Adquisición del 9 al 16 nov. Fuentes: santino/LLAMADA-31-OCT.md, ROADMAP-SANTINO.md, Miro Roadmap · Santino Lofeudo, calculadora Ruta a 100K." },
     { id:"primal", nombre:"Primal Growth · mi negocio", cliente:"Primal", tipo:"interno", evento:"", hora:"",
@@ -216,6 +234,35 @@ const T_SEED = {
       ["6 · Post webinar","Ventas","3 días de llamadas tomadas y seguimiento","","Equipo de ventas","P0",3,null],
       ["6 · Post webinar","Ventas","Cerrar la ventana y cargar resultados en Primal","","Santi","P1",7,null]
     ],
+    "estiven-nov": [
+      ["1 · Ads","Ads","Grabar los ads de adquisición en video","Estiven ya los está regrabando.","Estiven","P0",-10,null],
+      ["1 · Ads","Ads","VSL de registro editado y subido a la landing","Sin esto no se prende la campaña.","Santi","P0",-10,null],
+      ["1 · Ads","Ads","Guiones de los ads de adquisición en imagen (3 a 6), al 12 nov y meta safe","","Claude","P0",-10,null],
+      ["1 · Ads","Ads","Diseñar las imágenes de adquisición","","Editores","P0",-9,null],
+      ["1 · Ads","Ads","Guiones de nutrición en video, adaptados al 12 nov","","Claude","P1",-9,null],
+      ["1 · Ads","Ads","Grabar los de nutrición en video","","Estiven","P1",-7,null],
+      ["1 · Ads","Ads","Guiones y diseño de nutrición en imagen","","Claude","P1",-7,null],
+      ["1 · Ads","Ads","Guiones de recordatorio en video (24 horas y hoy)","","Claude","P1",-6,null],
+      ["1 · Ads","Ads","Grabar los de recordatorio en video","","Estiven","P1",-5,null],
+      ["1 · Ads","Ads","Guiones y diseño de recordatorio en imagen","","Claude","P1",-5,null],
+      ["1 · Ads","Ads","Verificar el anunciante en Meta con la LLC","","Santi","P0",-10,null],
+      ["1 · Ads","Ads","Montar las campañas: adquisición CBO + ABO, nutrición y recordatorio, con píxel y evento LeadCalificado","","Santi","P0",-9,null],
+      ["1 · Ads","Ads","Prender adquisición (mar 3 o mié 4)","Cuanto antes.","Santi","P0",-8,null],
+      ["2 · Páginas y comunidad","Funnel","Fecha 12 nov en la landing, la thank you, el formulario y GHL","Claude deja los cambios, Santi publica.","Santi","P0",-10,null],
+      ["2 · Páginas y comunidad","Funnel","Comunidad nueva de WhatsApp en grupos con límite, desde otro número","","Santi","P0",-9,null],
+      ["2 · Páginas y comunidad","Funnel","Link de la comunidad en el botón de la thank you","","Claude","P1",-8,null],
+      ["2 · Páginas y comunidad","Funnel","Grabar el video de la thank you sin API","","Estiven","P1",-7,null],
+      ["2 · Páginas y comunidad","Funnel","Corregir la bienvenida y el resumen de la semana: sin 'por privado' ni 'Quiero mis regalos'","","Claude","P1",-6,null],
+      ["2 · Páginas y comunidad","Funnel","Doc de regalos: link de la calculadora v2 y orden","","Claude","P2",-5,null],
+      ["3 · Nutrición y vivo","Funnel","Nutrición del grupo y recordatorios al calendario del 12 nov, sin repetir piezas","","Claude","P0",-8,null],
+      ["3 · Nutrición y vivo","Webinar","Presentación: fechas, bono de la lámina 7 y link del Typeform","","Claude","P1",-4,null],
+      ["3 · Nutrición y vivo","Ventas","Equipo confirmado: triager, confirmer y closer, con el número del triager en el Typeform","","Santi","P0",-5,null],
+      ["3 · Nutrición y vivo","Funnel","Link de Zoom en GHL y en los recordatorios","","Santi","P0",-3,null],
+      ["3 · Nutrición y vivo","Webinar","Ensayo el martes 10","","Estiven","P0",-2,null],
+      ["3 · Nutrición y vivo","Webinar","Webinar en vivo, jueves 12","","Estiven","P0",0,null],
+      ["4 · Post webinar","Ventas","Post webinar del 13 al 15: grupos 2 y 3, recontacto del SDR y cruce de registrados con minutos vistos en Zoom para el closer","","Equipo de ventas","P0",1,null],
+      ["4 · Post webinar","Finanzas","Cerrar los números del lanzamiento en el panel","","Santi","P1",4,null]
+    ],
     "santino": [
       ["0 · Decisiones","Estrategia","Confirmar la escalera nueva: 400 · Premium 1.000 (un pago) o 2 × 600 · VIP 3.500 · Black 15K","Dejar de vender General 3 m (900). Santino prefiere Premium a 1.200: decidir qué se testea el primer mes.","Santino","P0",null,"2026-11-02"],
       ["0 · Decisiones","Estrategia","Confirmar que el VIP tiene una sola llamada 1 a 1 inicial y si se mantiene","43 llamadas iniciales al mes es insostenible. Opción: solo para el anual.","Santino","P1",null,"2026-11-03"],
@@ -308,7 +355,24 @@ const T_SEED = {
       ["4 · Webinar 1","Ventas","Llamadas de upsell al VIP o Black para los que pagaron Premium y tienen potencial","Pregunta de calificación: 3 o más pruebas compradas = lista de upsell.","Equipo de ventas","P1",3,null],
       ["5 · Cadencia","Ads","Estructura de Meta para la pauta futura: Facebook viejo de alguien real, fanpage y Meta Business desde la secundaria","Sin pauta hasta 30K al mes orgánico; se deja listo.","Santi","P2",null,"2026-11-23"],
       ["5 · Cadencia","Funnel","Funnels nuevos: DM optimizado, preventa del webinar y post webinar con callers","Naza: no ahora; después del webinar 1.","Santi","P2",null,"2026-11-25"],
-      ["5 · Cadencia","Finanzas","Si se suma alguien al equipo de Santiago para esta cuenta: negociar que cobre del negocio de Santino","Naza: fijo 500 o 3 % si aprende; closer 10 %; director 7-15 % del negocio.","Santi","P2",null,"2026-11-23"]
+      ["5 · Cadencia","Finanzas","Si se suma alguien al equipo de Santiago para esta cuenta: negociar que cobre del negocio de Santino","Naza: fijo 500 o 3 % si aprende; closer 10 %; director 7-15 % del negocio.","Santi","P2",null,"2026-11-23"],
+      ["1 · Ya","Contenido orgánico","YouTube: 'Cómo empezar hacer Trading desde cero' como destacado y avance del canal","Hecho en la llamada del 2 nov. Se cambia por el BCL cuando esté subido.","Santi","P1",null, "2026-11-02"],
+      ["1 · Ya","Contenido orgánico","20 ideas de reels para grabar el mar 3","santino/REELS-20-IDEAS-3-NOV.md + docx. 15 de alcance y 5 con CTA TRADING.","Claude","P0",null, "2026-11-02"],
+      ["1 · Ya","Funnel","Audio de nuevo seguidor escrito","En FLUJO-MANYCHAT-TRADING.md, con botones 'Ya arranqué' y 'Quiero arrancar'.","Claude","P1",null, "2026-11-02"],
+      ["1 · Ya","Estrategia","Mandarle a Santino la lista de lo que solo puede hacer él","Número de Dubái, Calendly en los videos, 2.º canal, BCL al editor, Whop, ManyChat, TikTok, masterclass a Drive, grabar los 20 reels.","Santi","P0",null, "2026-11-02"],
+      ["1 · Ya","Contenido orgánico","Pasar las 20 ideas al Google Doc REELS LOFEUDO NOVIEMBRE","Un reel por bloque.","Claude","P1",null, "2026-11-02"],
+      ["3 · Ventas","Funnel","Sacar el número de Dubái (Virgin Mobile, Dubai Marina Mall) para WhatsApp Business + ManyChat","Reemplaza al argentino, que no se pudo activar.","Santino","P0",null, "2026-11-04"],
+      ["2 · YouTube y contenido","Funnel","Calendly en las 2 primeras líneas de la descripción y en un comentario fijado de todos los videos","Hasta que esté el número de WhatsApp.","Santino","P0",null, "2026-11-03"],
+      ["2 · YouTube y contenido","Contenido orgánico","Grabar los 20 reels y el audio de nuevo seguidor","Orden de grabación por lugar al final del docx.","Santino","P0",null, "2026-11-03"],
+      ["3 · Ventas","Ventas","Whop: confirmar retiro a cripto y terminar el producto (250 × 6 cuotas + 1.500 pago único)","Las cuotas se habilitan después de 30K según su contacto. Probar el link desde otro celu.","Santino","P0",null, "2026-11-03"],
+      ["2 · YouTube y contenido","Funnel","Subir a Drive las 5 horas de masterclass para usarlas de recursos","","Santino","P1",null, "2026-11-04"],
+      ["2 · YouTube y contenido","Funnel","ManyChat en la IG secundaria: solo la palabra TRADING, nunca cualquier comentario","Puede ser lo que bloqueó la cuenta.","Claude","P1",null, "2026-11-04"],
+      ["4 · Webinar 1","Ads","Guiones de ads de adquisición: 12 en video y 3 a 6 en imagen","Meta safe: sin $, sin 'gratis', P/L borroneado.","Claude","P0",null, "2026-11-04"],
+      ["4 · Webinar 1","Ads","Guiones de nutrición y de recordatorio, en video y en imagen","","Claude","P0",null, "2026-11-05"],
+      ["4 · Webinar 1","Ads","Guion del VSL de registro y del video de la thank you","","Claude","P0",null, "2026-11-04"],
+      ["4 · Webinar 1","Ads","Santino graba los ads, el VSL y la thank you","","Santino","P0",null, "2026-11-05"],
+      ["4 · Webinar 1","Ads","Prender adquisición a la landing (10 días, sin follow-me)","","Santi","P0",-10,null],
+      ["5 · Cadencia","Estrategia","Decidir el low ticket de ~100 (curso + Discord), solo para quien no tiene el dinero en la llamada","","Santi","P2",null, "2026-11-10"]
     ],
     "primal": [
       ["Sistemas","Sistemas","Instalar ntfy en el celular y suscribirte a tu canal de avisos","Tareas → Avisos: ahí está el canal y el botón de prueba.","Santi","P0",null,"2026-10-27"],
