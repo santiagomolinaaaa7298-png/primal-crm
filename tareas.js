@@ -11,7 +11,7 @@ const T_RESP = ["Santi","Claude","Cliente","Sebas","Amelia","Estiven","Editores"
 const T_TIPOS = {pago:"Webinar pago", organico:"Webinar orgánico", vsl:"VSL funnel", interno:"Interno"};
 const NTFY = "https://ntfy.sh";
 const NTFY_TOPIC = "primal-santi-a7f08dd811"; // canal por defecto (el que se suscribe en la app ntfy del celular)
-let T_F = {proy:"", resp:"", estado:"abiertas", modo:"fecha"};
+let T_F = {proy:"", resp:"", estado:"abiertas", modo:"tablero"};
 const TAREAS_PUBLICAS_URL = "https://primal-tareas.vercel.app"; // página pública de tareas de clientes (31 oct 2026): proyecto Vercel primal-tareas, carpeta publico/ (pendiente: dominio tareas.primalgrowth.co)
 function proyPublico(p){ return (p.publico===undefined || p.publico===null) ? p.tipo!=="interno" : !!p.publico; } // sale en la página pública salvo que se apague (los internos, apagados por defecto)
 
@@ -27,6 +27,56 @@ function offLabel(n){ n=Number(n); return n===0 ? "día del evento" : n<0 ? `${-
 function faltaLabel(n){ if(n==null) return "sin fecha"; if(n===0) return "hoy"; if(n===1) return "mañana"; if(n<0) return `venció hace ${-n} d`; return `faltan ${n} d`; }
 function faltaCls(t){ const n=tFalta(t); if(!tAbierta(t)) return "done"; if(n==null) return ""; if(n<0) return "venc"; if(n<=1) return "hoy"; if(n<=3) return "pronto"; if(n<=7) return "semana"; return ""; }
 function tareasVencidasHoy(){ return tareas().filter(t=>tAbierta(t) && tVence(t) && tFalta(t)<=0).length; }
+
+/* ---------- tablero (tipo Trello): un tablero por evento, columnas por frente, tarjetas por prioridad + deadline ---------- */
+const T_FRENTES = ["Decisiones","Webinar","Evergreen · YouTube","Evergreen · IG","Ventas y sistemas","Oferta y producto","General"];
+function tieneEvergreen(p){ return !!p && (p.evergreen || /evergreen/i.test(p.nombre||"")); }
+function frenteDe(t){
+  if(t.frente) return t.frente;
+  const p=proyDe(t); if(!tieneEvergreen(p)) return (t.etapa||"General").replace(/^\d+\s*·\s*/,"");
+  const e=t.etapa||"", x=((t.titulo||"")+" "+(t.area||"")).toLowerCase();
+  if(/^0/.test(e)) return "Decisiones";
+  if(/^4/.test(e) || /webinar|\bads\b|anuncio|publicitaria|píxel/.test(x)) return "Webinar";
+  if(/low ticket|producto de|escalera|bootcamp|inner circle|done with you|precio/.test(x)) return "Oferta y producto";
+  if(/instagram|\big\b|tiktok|manychat|reel|historia|\bbio\b|seguidor|masterclass/.test(x)) return "Evergreen · IG";
+  if(/youtube|canal|bcl|episodio|serie|playlist|shorts|miniatura|editor|portada|descripción|video/.test(x)) return "Evergreen · YouTube";
+  if(/venta|setter|closer|whop|dlocal|whatsapp|crm|comisi|calendly|cobro|número|pago|facturación/.test(x)) return "Ventas y sistemas";
+  return "General";
+}
+function tOrden(a,b){
+  return (tAbierta(b)-tAbierta(a)) || (a.prio||"P9").localeCompare(b.prio||"P9") || (tVence(a)||"9999").localeCompare(tVence(b)||"9999");
+}
+function tCard(t){
+  const v=tVence(t), n=tFalta(t);
+  return `<div class="kb-card ${faltaCls(t)} p-${esc(t.prio||"")}" draggable="true" data-tid="${t.id}" onclick="openTarea('${t.id}')">
+    <div class="kb-top"><button class="t-check ${t.estado==="hecho"?"on":""}" onclick="event.stopPropagation();toggleTarea('${t.id}')"></button>
+      <b>${esc(t.titulo)}</b></div>
+    <div class="kb-meta"><span class="tag ${t.prio==="P0"?"warn":""}" title="${esc(T_PRIO[t.prio]||"")}">${esc(t.prio||"—")}</span>
+      <span>${esc(t.resp||"—")}</span>${t.estado==="progreso"?`<span class="ok">en progreso</span>`:t.estado==="trabada"?`<span class="bad">trabada</span>`:""}
+      <span class="kb-due">${t.estado==="hecho"?"hecha":v?`${dayLabel(v)} · ${faltaLabel(n)}`:`<span class="dim">sin deadline</span>`}</span></div>
+  </div>`;
+}
+function tablero(p, list){
+  const rows=list.filter(t=>t.proyecto===p.id); if(!rows.length) return "";
+  const cols=[...new Set(rows.map(frenteDe))].sort((a,b)=>{ const ia=T_FRENTES.indexOf(a), ib=T_FRENTES.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib) || a.localeCompare(b); });
+  const n=p.evento?diasEntre(todayStr(),p.evento):null;
+  return `<section class="kb-proy"><h3 class="t-g">${esc(p.nombre)} <span class="sub">${n==null?"sin evento":n<0?`pasó hace ${-n} d`:`${n} d · ${dayLabel(p.evento)}`} · ${rows.filter(tAbierta).length} abiertas</span></h3>
+    <div class="kb">${cols.map(c=>{ const cs=rows.filter(t=>frenteDe(t)===c).sort(tOrden), p0=cs.filter(t=>tAbierta(t)&&t.prio==="P0").length;
+      return `<div class="kb-col" data-col="${esc(c)}" data-proy="${p.id}"><div class="kb-h"><b>${esc(c)}</b><span>${cs.filter(tAbierta).length}${p0?` · <em>${p0} P0</em>`:""}</span></div>${cs.map(tCard).join("")}</div>`; }).join("")}</div></section>`;
+}
+function renderTablero(list){
+  const ps=proyectos().filter(p=>!p.archivado && (!T_F.proy||p.id===T_F.proy)).sort((a,b)=>(a.evento||"9999").localeCompare(b.evento||"9999"));
+  return ps.map(p=>tablero(p,list)).join("") || `<div class="empty" style="padding:22px">Nada por acá.</div>`;
+}
+function initTablero(el){
+  $$(".kb-card",el).forEach(c=>c.ondragstart=e=>{ e.dataTransfer.setData("text/plain",c.dataset.tid); c.classList.add("drag"); });
+  $$(".kb-col",el).forEach(col=>{
+    col.ondragover=e=>{ e.preventDefault(); col.classList.add("over"); };
+    col.ondragleave=()=>col.classList.remove("over");
+    col.ondrop=async e=>{ e.preventDefault(); col.classList.remove("over"); const t=tareas().find(x=>x.id===e.dataTransfer.getData("text/plain")); if(!t||t.proyecto!==col.dataset.proy) return;
+      if(frenteDe(t)===col.dataset.col) return; t.frente=col.dataset.col; await saveState("tareas"); render(); toast(`Movida a ${col.dataset.col}`); };
+  });
+}
 
 /* ---------- carga inicial (una vez por versión del seed) ---------- */
 async function seedTareas(){
@@ -77,14 +127,15 @@ function renderTareas(){
   <div class="filters">
     <div class="seg">${["abiertas","hechas","todas"].map(f=>`<button data-tf="${f}" class="${T_F.estado===f?"active":""}">${f}</button>`).join("")}</div>
     <select id="t-resp"><option value="">Todos</option>${resps.map(r=>`<option ${T_F.resp===r?"selected":""}>${esc(r)}</option>`).join("")}</select>
-    <div class="seg">${[["fecha","por fecha"],["etapa","por etapa"],["cliente","por cliente"]].map(([k,l])=>`<button data-tm="${k}" class="${T_F.modo===k?"active":""}">${l}</button>`).join("")}</div>
+    <div class="seg">${[["tablero","tablero"],["fecha","por fecha"],["etapa","por etapa"],["cliente","por cliente"]].map(([k,l])=>`<button data-tm="${k}" class="${T_F.modo===k?"active":""}">${l}</button>`).join("")}</div>
     ${T_F.proy?`<button class="btn xs ghost" onclick="T_F.proy='';render()">× ${esc((proyectos().find(p=>p.id===T_F.proy)||{}).nombre||"")}</button>`:""}
     <span class="spacer"></span>
     <a class="btn sm ghost" href="${TAREAS_PUBLICAS_URL}" target="_blank" rel="noopener" title="La página de solo lectura con las tareas de todos los clientes">Página de clientes ↗</a>
     <button class="btn sm ghost" onclick="openAvisos()">Avisos al celular</button>
     <button class="btn sm gold" onclick="openTarea()">+ Tarea</button>
   </div>
-  <div class="panel">${!list.length?`<div class="empty" style="padding:22px">Nada por acá.</div>`:T_F.modo==="etapa"?renderPorEtapa(list):T_F.modo==="cliente"?renderPorCliente(list):renderPorFecha(list)}</div>`;
+  ${T_F.modo==="tablero"?`<div class="kb-wrap">${renderTablero(list)}</div>`:`<div class="panel">${!list.length?`<div class="empty" style="padding:22px">Nada por acá.</div>`:T_F.modo==="etapa"?renderPorEtapa(list):T_F.modo==="cliente"?renderPorCliente(list):renderPorFecha(list)}</div>`}`;
+  if(T_F.modo==="tablero") initTablero(el);
 
   $$("[data-tf]",el).forEach(b=>b.onclick=()=>{T_F.estado=b.dataset.tf;render();});
   $$("[data-tm]",el).forEach(b=>b.onclick=()=>{T_F.modo=b.dataset.tm;render();});
@@ -150,6 +201,7 @@ function openTarea(id){
       <div class="f"><label>Responsable</label><select id="t-res">${[...new Set([...T_RESP,t.resp].filter(Boolean))].map(r=>`<option ${r===t.resp?"selected":""}>${esc(r)}</option>`).join("")}</select></div></div>
     <div class="f2"><div class="f"><label>Etapa</label><input id="t-eta" value="${esc(t.etapa||"")}" placeholder="1 · Equipo de ventas" /></div>
       <div class="f"><label>Área</label><input id="t-area" value="${esc(t.area||"")}" placeholder="Ads · Funnel · Ventas…" /></div></div>
+    <div class="f"><label>Frente (columna del tablero)</label><input id="t-fre" list="t-fre-l" value="${esc(t.frente||"")}" placeholder="${esc(id?frenteDe(t):"Webinar · Evergreen · YouTube…")}" /><datalist id="t-fre-l">${T_FRENTES.map(f=>`<option value="${f}">`).join("")}</datalist><small class="dim">Vacío = se elige sola. También podés arrastrar la tarjeta a otra columna.</small></div>
     <div class="f"><label>Prioridad</label><div class="pick" id="t-prio">${["P0","P1","P2"].map(x=>`<button type="button" data-v="${x}" class="${t.prio===x?"on":""}">${x} · ${T_PRIO[x]}</button>`).join("")}</div></div>
     <div class="f"><label>Fecha límite</label><div class="pick" id="t-modo"><button type="button" data-v="off" class="${modo==="off"?"on":""}">Días vs evento</button><button type="button" data-v="fecha" class="${modo==="fecha"?"on":""}">Fecha fija</button></div></div>
     <div class="f2"><div class="f" id="w-off"><label>Días vs evento (− antes, + después)</label><input id="t-off" type="number" value="${tieneOff(t)?t.off:""}" placeholder="-10" /><small class="dim" id="t-off-lbl"></small></div>
@@ -172,7 +224,7 @@ function openTarea(id){
       const est=$("#t-est").value;
       const patch={titulo, proyecto:$("#t-proy").value, resp:$("#t-res").value, etapa:$("#t-eta").value.trim(), area:$("#t-area").value.trim(), prio:pickVal("#t-prio")||"P1",
         off:m==="off"?Number($("#t-off").value):null, fecha:m==="fecha"?$("#t-fecha").value:"", estado:est, link:$("#t-link").value.trim(), detalle:$("#t-det").value.trim(), notas:$("#t-not").value.trim(),
-        hechaEl: est==="hecho" ? (t.hechaEl||todayStr()) : "", oculta:$("#t-oc").checked};
+        hechaEl: est==="hecho" ? (t.hechaEl||todayStr()) : "", oculta:$("#t-oc").checked, frente:$("#t-fre").value.trim()};
       if(id) Object.assign(t,patch); else STATE.tareas.push(Object.assign({id:uid()},patch));
       await saveState("tareas"); render();
     },

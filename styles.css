@@ -402,3 +402,29 @@ table.tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}
 .onb-txt{white-space:pre-wrap;margin:8px 0 0 30px;font-size:14.5px;line-height:1.6;color:var(--ivory)}
 .onb-audio{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0 0 30px}
 .onb-audio audio{height:34px;max-width:100%;flex:1 1 260px;color-scheme:dark}
+
+/* ---------- tareas · tablero (tipo Trello) ---------- */
+.kb-proy{margin-top:18px}
+.kb{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 12px;scroll-snap-type:x proximity}
+.kb-col{flex:0 0 290px;scroll-snap-align:start;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px;display:flex;flex-direction:column;gap:8px;min-height:80px;max-height:72vh;overflow-y:auto}
+.kb-col.over{border-color:var(--gold);background:var(--panel-2)}
+.kb-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:2px 4px 6px;border-bottom:1px solid var(--line);position:sticky;top:-10px;background:var(--bg-2);z-index:1}
+.kb-h b{font-family:var(--display);font-size:15px;font-weight:600;color:var(--ivory)}
+.kb-h span{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.kb-h em{color:var(--warn);font-style:normal}
+.kb-card{background:var(--bg-3);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px;cursor:grab;box-shadow:inset 3px 0 0 var(--dim)}
+.kb-card:hover{border-color:var(--line-2)}
+.kb-card.drag{opacity:.4}
+.kb-card.p-P0{box-shadow:inset 3px 0 0 var(--red)}
+.kb-card.p-P1{box-shadow:inset 3px 0 0 var(--gold)}
+.kb-card.venc{border-color:rgba(232,51,75,.45)}
+.kb-card.done{opacity:.45}
+.kb-card.done b{text-decoration:line-through;text-decoration-color:var(--dim)}
+.kb-top{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start}
+.kb-top b{font-weight:600;font-size:13px;line-height:1.35}
+.kb-meta{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:8px 0 0 32px;font-size:11px;color:var(--muted)}
+.kb-due{font-family:var(--mono);font-size:10px;margin-left:auto}
+.kb-card.venc .kb-due{color:var(--bad)}
+.kb-card.hoy .kb-due{color:var(--gold-2)}
+.kb-card.pronto .kb-due{color:var(--warn)}
+@media (max-width:640px){.kb-col{flex-basis:84vw}}
